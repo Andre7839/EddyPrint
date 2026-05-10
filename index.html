@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EddyPrint</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+:root{
+  --bg:#f0f4f8; --panel:#ffffff; --panel2:#f7fafd;
+  --border:#d0dce8; --border2:#b8ccde;
+  --a1:#0077cc; --a1h:#005fa3; --a1l:#e8f3fb;
+  --a2:#e8500a; --a3:#1a8a3c;
+  --text:#1a2b3c; --text2:#3a5470; --muted:#6688aa; --dim:#99aabb;
+  --yellow:#e07b00; --red:#cc2200;
+  --shadow:rgba(0,80,160,.12);
+  --panel-w:265px; --right-w:240px;
+}
+html,body{ height:100%; background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; font-size:14px; overflow:hidden; -webkit-font-smoothing:antialiased; }
+
+/* ── SHELL ── */
+#app{ display:grid; grid-template-rows:58px 1fr; height:100vh; }
+
+header{
+  display:flex; align-items:center; gap:14px; padding:0 22px;
+  background:#fff; border-bottom:1px solid var(--border);
+  box-shadow:0 2px 10px var(--shadow); z-index:1100; position:relative;
+}
+.logo{ width:36px; height:36px; border-radius:8px; background:linear-gradient(135deg,#0055aa,#0099cc); display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 2px 8px rgba(0,100,200,.22); flex-shrink:0; }
+.hdr-title h1{ font-family:'Syne',sans-serif; font-size:15px; font-weight:800; color:var(--text); letter-spacing:.2px; }
+.hdr-title p{ font-size:10px; color:var(--muted); letter-spacing:1.5px; margin-top:1px; }
+.hdr-chips{ margin-left:auto; display:flex; gap:24px; }
+.chip .lbl{ font-size:10px; color:var(--a1); letter-spacing:2px; font-weight:600; text-transform:uppercase; }
+.chip .val{ font-size:15px; font-weight:700; color:var(--text); margin-top:1px; }
+.chip .val.y{ color:var(--yellow); } .chip .val.g{ color:var(--a3); } .chip .val.b{ color:var(--a1); }
+
+/* ── BODY: side panels + full map ── */
+#body{ display:grid; grid-template-columns:var(--panel-w) 1fr var(--right-w); min-height:0; position:relative; }
+
+/* ── SIDE PANELS ── */
+.panel{ background:var(--panel); padding:16px 14px; overflow-y:auto; border-right:1px solid var(--border); z-index:1050; position:relative; }
+.panel.right{ border-right:none; border-left:1px solid var(--border); }
+.sec{ font-size:10px; font-weight:700; color:var(--a1); letter-spacing:2px; text-transform:uppercase; border-bottom:2px solid var(--a1l); padding-bottom:6px; margin-bottom:12px; margin-top:16px; }
+.sec:first-child{ margin-top:0; }
+
+/* sliders */
+.param{ margin-bottom:13px; }
+.prow{ display:flex; justify-content:space-between; margin-bottom:3px; align-items:center; }
+.pname{ font-size:12px; font-weight:500; color:var(--text2); }
+.pval{ font-size:14px; font-weight:700; color:var(--a1); background:var(--a1l); padding:1px 7px; border-radius:4px; min-width:56px; text-align:right; }
+.pinfo{ font-size:10px; color:var(--dim); margin-bottom:3px; line-height:1.45; }
+input[type=range]{ -webkit-appearance:none; width:100%; height:5px; background:var(--border); border-radius:3px; cursor:pointer; outline:none; }
+input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:14px; height:14px; background:var(--a1); border-radius:50%; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,100,200,.3); transition:transform .15s; }
+input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.25); }
+.tog{ display:flex; align-items:center; gap:7px; margin-top:9px; cursor:pointer; font-size:12px; color:var(--text2); font-weight:500; }
+.tog input{ accent-color:var(--a1); width:14px; height:14px; }
+.tog:hover{ color:var(--a1); }
+
+/* ── Basemap toggle ── */
+#basemap-btns{ display:flex; gap:6px; margin-top:2px; }
+.bm-btn{
+  flex:1; padding:7px 4px; font-size:12px; font-weight:600;
+  font-family:'Inter',sans-serif; cursor:pointer;
+  border:1.5px solid var(--border2); border-radius:7px;
+  background:var(--panel2); color:var(--text2);
+  transition:all .18s; white-space:nowrap;
+}
+.bm-btn:hover{ border-color:var(--a1); color:var(--a1); background:var(--a1l); }
+.bm-btn.active{
+  background:var(--a1); color:#fff; border-color:var(--a1);
+  box-shadow:0 2px 8px rgba(0,100,200,.25);
+}
+
+/* ── MAP CONTAINER ── */
+#map-wrap{ position:relative; min-height:0; overflow:hidden; }
+#leaflet-map{ width:100%; height:100%; }
+.leaflet-container{ background:#b0b8c0; font-family:'Inter',sans-serif; }
+
+/* ── WIND COMPASS ── */
+#wind-compass{
+  position:absolute; top:14px; right:14px; z-index:1050;
+  background:rgba(255,255,255,.93); border:1.5px solid var(--border);
+  border-radius:10px; box-shadow:0 2px 10px var(--shadow);
+  padding:6px 8px 4px; display:flex; flex-direction:column;
+  align-items:center; gap:1px; pointer-events:none;
+}
+#wind-compass-label{
+  font-size:8px; font-weight:700; color:var(--muted);
+  letter-spacing:2px; text-transform:uppercase;
+}
+#wind-dir-label{
+  font-size:10px; font-weight:700; color:var(--a1);
+  letter-spacing:.5px;
+}
+
+/* ── MAP HINT ── */
+#map-hint{
+  position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
+  background:rgba(255,255,255,.95); border:1.5px solid var(--a1); border-radius:8px;
+  padding:8px 20px; font-size:12px; font-weight:600; color:var(--a1);
+  pointer-events:none; z-index:1000; white-space:nowrap;
+  box-shadow:0 3px 12px var(--shadow);
+}
+#coord-badge{
+  position:absolute; top:12px; left:50%; transform:translateX(-50%);
+  background:rgba(255,255,255,.95); border:1px solid var(--border2); border-radius:6px;
+  padding:5px 14px; font-size:12px; font-weight:600; color:var(--a1);
+  pointer-events:none; z-index:1000; display:none; box-shadow:0 2px 8px var(--shadow);
+}
+
+/* Toggle detail button on map */
+#btn-toggle-detail{
+  position:absolute; bottom:18px; right:18px; z-index:1050;
+  background:var(--a1); border:none; border-radius:8px;
+  padding:9px 16px; font-size:12px; font-weight:700; color:#fff;
+  cursor:pointer; box-shadow:0 2px 10px var(--shadow); transition:all .18s;
+  display:none; font-family:'Inter',sans-serif; letter-spacing:.3px;
+}
+#btn-toggle-detail:hover{ background:var(--a1h); transform:translateY(-1px); }
+
+/* ── RIGHT PANEL ── */
+.metric{ margin-bottom:14px; }
+.metric .ml{ font-size:10px; font-weight:700; color:var(--muted); margin-bottom:2px; text-transform:uppercase; letter-spacing:1px; }
+.metric .mv{ font-size:20px; font-weight:700; line-height:1; }
+.metric .ms{ font-size:10px; color:var(--dim); margin-top:2px; }
+.fbar-wrap{ margin-bottom:12px; }
+.fbar-label{ font-size:12px; font-weight:600; color:var(--text2); margin-bottom:4px; }
+.fbar-track{ height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
+.fbar-fill{ height:100%; border-radius:3px; transition:width .4s ease; }
+.fbar-val{ font-size:14px; font-weight:700; margin-top:3px; }
+.fbar-area{ font-size:10px; color:var(--dim); margin-top:1px; }
+.coord-row{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+.coord-item{ background:var(--a1l); border:1px solid #cce0f0; border-radius:6px; padding:6px 10px; }
+.coord-item .cl{ font-size:10px; font-weight:700; color:var(--a1); letter-spacing:1px; text-transform:uppercase; }
+.coord-item .cv{ font-size:12px; font-weight:700; color:var(--text); margin-top:2px; font-variant-numeric:tabular-nums; }
+.infobox{ margin-top:12px; padding:10px 11px; background:var(--panel2); border:1px solid var(--border); border-radius:6px; font-size:11px; color:var(--text2); line-height:2; }
+.infobox b{ color:var(--a1); font-weight:700; }
+#coord-verify{ background:var(--a1l); border-color:#b0d0e8; display:none; }
+
+#export-btn{ width:100%; padding:11px; background:linear-gradient(135deg,var(--a1),#0099cc); border:none; border-radius:8px; color:#fff; font-family:'Inter',sans-serif; font-size:13px; font-weight:700; letter-spacing:.5px; cursor:pointer; transition:all .2s; margin-top:14px; box-shadow:0 2px 8px rgba(0,100,200,.2); }
+#export-btn:hover{ background:linear-gradient(135deg,var(--a1h),#007faa); box-shadow:0 4px 14px rgba(0,100,200,.3); transform:translateY(-1px); }
+#export-btn:active{ transform:scale(.98); }
+#export-btn:disabled{ opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
+#export-status{ font-size:11px; text-align:center; margin-top:5px; min-height:15px; line-height:1.5; }
+
+::-webkit-scrollbar{ width:4px; }
+::-webkit-scrollbar-track{ background:var(--bg); }
+::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:2px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<header>
+  <div class="logo">🌬</div>
+  <div class="hdr-title">
+    <h1>EddyPrint</h1>
+    <p>EDDY COVARIANCE FOOTPRINT · HSIEH 2000 · WGS84 GEOTIFF EXPORT</p>
+  </div>
+  <div class="hdr-chips">
+    <div class="chip"><div class="lbl">Stability</div><div class="val g" id="hc-stab">—</div></div>
+    <div class="chip"><div class="lbl">Peak ↗</div><div class="val y" id="hc-peak">—</div></div>
+    <div class="chip"><div class="lbl">Location</div><div class="val b" id="hc-loc" style="font-size:11px">Click map</div></div>
+  </div>
+</header>
+
+<div id="body">
+
+<!-- LEFT PANEL -->
+<div class="panel">
+  <div class="sec">Tower Parameters</div>
+  <div class="param">
+    <div class="prow"><span class="pname">Meas. Height z<sub>m</sub></span><span class="pval"><span id="v-zm">3.5</span> m</span></div>
+    <input type="range" id="s-zm" min="1" max="40" step="0.5" value="3.5"/>
+  </div>
+  <div class="param">
+    <div class="prow"><span class="pname">Roughness Length z₀</span><span class="pval"><span id="v-z0">0.100</span> m</span></div>
+    <div class="pinfo">grass≈0.03 · crop≈0.1 · forest≈1</div>
+    <input type="range" id="s-z0" min="0.001" max="1.5" step="0.001" value="0.1"/>
+  </div>
+  <div class="param">
+    <div class="prow"><span class="pname">Friction Velocity u*</span><span class="pval"><span id="v-ustar">0.40</span> m/s</span></div>
+    <input type="range" id="s-ustar" min="0.05" max="2.0" step="0.05" value="0.4"/>
+  </div>
+  <div class="param">
+    <div class="prow"><span class="pname">Lateral Wind σᵥ</span><span class="pval"><span id="v-sigmav">0.50</span> m/s</span></div>
+    <div class="pinfo">Crosswind turbulence intensity</div>
+    <input type="range" id="s-sigmav" min="0.05" max="2.5" step="0.05" value="0.5"/>
+  </div>
+
+  <div class="sec">Atmospheric</div>
+  <div class="param">
+    <div class="prow"><span class="pname">Obukhov Length L</span><span class="pval"><span id="v-L">-50</span> m</span></div>
+    <div class="pinfo">&lt;0 unstable · &gt;0 stable · ±∞ neutral</div>
+    <input type="range" id="s-L" min="-500" max="500" step="5" value="-50"/>
+  </div>
+  <div class="param">
+    <div class="prow"><span class="pname">Wind Direction</span><span class="pval"><span id="v-windDir">225</span>°</span></div>
+    <div class="pinfo">Direction wind blows FROM</div>
+    <input type="range" id="s-windDir" min="0" max="359" step="1" value="225"/>
+  </div>
+
+  <div class="sec">Domain</div>
+  <div class="param">
+    <div class="prow"><span class="pname">Grid Resolution</span><span class="pval"><span id="v-nx">120</span>×<span id="v-nx2">120</span></span></div>
+    <input type="range" id="s-nx" min="60" max="200" step="20" value="120"/>
+  </div>
+
+  <div class="sec">Basemap</div>
+  <div id="basemap-btns">
+    <button class="bm-btn active" data-bm="light" title="Light gray canvas">🗺 Light</button>
+    <button class="bm-btn" data-bm="satellite" title="Esri satellite imagery">🛰 Satellite</button>
+  </div>
+
+  <div class="sec">Display</div>
+  <label class="tog"><input type="checkbox" id="chk-overlay" checked/>Heatmap overlay</label>
+  <label class="tog" style="margin-top:7px"><input type="checkbox" id="chk-contours" checked/>Contour rings</label>
+</div>
+
+<!-- MAP -->
+<div id="map-wrap">
+  <div id="leaflet-map"></div>
+  <div id="map-hint">Click anywhere on the map to place the EC tower</div>
+  <div id="coord-badge"></div>
+
+  <!-- Wind direction compass -->
+  <div id="wind-compass">
+    <div id="wind-compass-label">WIND</div>
+    <svg id="wind-compass-svg" width="54" height="54" viewBox="-27 -27 54 54">
+      <!-- N label -->
+      <text x="0" y="-18" text-anchor="middle" dominant-baseline="central"
+            font-size="7" font-family="Inter,sans-serif" font-weight="700"
+            fill="#6688aa">N</text>
+      <!-- Compass ring -->
+      <circle cx="0" cy="0" r="20" fill="none" stroke="#d0dce8" stroke-width="1"/>
+      <!-- Arrow group — rotates with windDir -->
+      <g id="wind-arrow-g">
+        <!-- Arrow shaft -->
+        <line x1="0" y1="16" x2="0" y2="-14"
+              stroke="#0077cc" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- Arrowhead pointing in wind-from direction -->
+        <polygon points="0,-20 -5,-11 5,-11"
+                 fill="#0077cc"/>
+        <!-- Tail feather -->
+        <line x1="-4" y1="16" x2="4" y2="16"
+              stroke="#0077cc" stroke-width="2" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <div id="wind-dir-label">225°</div>
+  </div>
+
+  <!-- Detail view opens in new tab -->
+  <button id="btn-toggle-detail">📊 Open Footprint Detail</button>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="panel right">
+  <div class="sec">Tower Location</div>
+  <div class="coord-row">
+    <div class="coord-item"><div class="cl">Latitude</div><div class="cv" id="d-lat">Not set</div></div>
+    <div class="coord-item"><div class="cl">Longitude</div><div class="cv" id="d-lon">Not set</div></div>
+    <div class="coord-item"><div class="cl">CRS (Export)</div><div class="cv" id="d-crs">WGS 84 · EPSG:4326</div></div>
+  </div>
+
+  <div class="sec">Key Metrics</div>
+  <div class="metric">
+    <div class="ml">Peak Distance</div>
+    <div class="mv" id="m-peak" style="color:var(--yellow)">—</div>
+    <div class="ms">upwind of tower</div>
+  </div>
+  <div class="metric">
+    <div class="ml">Wind Speed (z<sub>m</sub>)</div>
+    <div class="mv" id="m-wind" style="color:var(--a1)">—</div>
+    <div class="ms">log-law estimate</div>
+  </div>
+  <div class="metric">
+    <div class="ml">Stability Regime</div>
+    <div class="mv" id="m-stab" style="color:var(--a3);font-size:14px;padding-top:3px">—</div>
+  </div>
+
+  <div class="sec">Flux Source Areas</div>
+  <div class="fbar-wrap">
+    <div class="fbar-label">50% Flux Source Area</div>
+    <div class="fbar-track"><div class="fbar-fill" id="fb-50" style="background:#e8500a;width:0%"></div></div>
+    <div class="fbar-val" id="fv-50" style="color:#e8500a">—</div>
+    <div class="fbar-area" id="fa-50">—</div>
+  </div>
+  <div class="fbar-wrap">
+    <div class="fbar-label">70% Flux Source Area</div>
+    <div class="fbar-track"><div class="fbar-fill" id="fb-70" style="background:var(--yellow);width:0%"></div></div>
+    <div class="fbar-val" id="fv-70" style="color:var(--yellow)">—</div>
+    <div class="fbar-area" id="fa-70">—</div>
+  </div>
+  <div class="fbar-wrap">
+    <div class="fbar-label">90% Flux Source Area</div>
+    <div class="fbar-track"><div class="fbar-fill" id="fb-90" style="background:#5580aa;width:0%"></div></div>
+    <div class="fbar-val" id="fv-90" style="color:#5580aa">—</div>
+    <div class="fbar-area" id="fa-90">—</div>
+  </div>
+
+  <button id="export-btn" disabled>⬇ Export GeoTIFF (WGS 84)</button>
+  <div id="export-status"></div>
+
+  <div class="infobox" id="coord-verify">
+    <b>📌 Coordinate Audit</b><br/>
+    <span style="color:var(--muted)">Tower WGS 84</span><br/>
+    <span id="cv-latlon" style="font-weight:600">—</span><br/>
+    <span style="color:var(--muted)">Tiepoint NW corner</span><br/>
+    <span id="cv-tp" style="color:var(--a1);font-weight:600">—</span><br/>
+    <span style="color:var(--muted)">BBox lon W–E</span><br/>
+    <span id="cv-bbox-lon">—</span><br/>
+    <span style="color:var(--muted)">BBox lat S–N</span><br/>
+    <span id="cv-bbox-lat">—</span><br/>
+    <span style="color:var(--muted)">Pixel size</span><br/>
+    <span id="cv-dx" style="color:var(--yellow);font-weight:600">—</span>
+  </div>
+
+  <div class="infobox">
+    <b>Model</b> Hsieh et al. (2000)<br/>
+    <b>CRS</b> WGS 84 / EPSG:4326<br/>
+    <b>Format</b> Float32, 1 band<br/>
+    <b>Values</b> Norm. flux density<br/>
+    <b>NoData</b> 0.0<br/>
+    <b>Opens in</b> QGIS · ArcGIS · GDAL
+  </div>
+</div>
+
+</div><!-- #body -->
+</div><!-- #app -->
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════
+//  PHYSICS — Hsieh et al. (2000)
+// ═══════════════════════════════════════════════════════
+const KAPPA = 0.4;
+function psiM(z) {
+  if (z>=0) return -5*z;
+  const x=Math.pow(1-16*z,.25);
+  return 2*Math.log((1+x)/2)+Math.log((1+x*x)/2)-2*Math.atan(x)+Math.PI/2;
+}
+function windSpeed(zm,z0,ustar,L){
+  const z=L!==0?zm/L:0;
+  return Math.max(0.3,(ustar/KAPPA)*(Math.log(zm/Math.max(z0,.001))-psiM(z)));
+}
+// CORRECTED Hsieh (2000) Eq. 17: z0 (roughness length) in denominator, NOT zm
+// Fl = D * zm^(1+P) / (kappa^2 * z0^P)
+function calcFl(zm,z0,zeta){
+  const D=zeta>=0?0.97:0.28, Ps=zeta>=0?1.0:0.59;
+  return D*Math.pow(zm,1+Ps)/(KAPPA*KAPPA*Math.pow(Math.max(z0,0.001),Ps));
+}
+// Compute domain size dynamically so the footprint always fits with adequate resolution
+// Target: peak distance covered by ≥12 grid cells, 90% extent inside domain
+function computeDomain(zm,z0,ustar,sigmav,L,nx){
+  const zeta=L!==0?zm/L:0;
+  const Fl=calcFl(zm,z0,zeta);
+  const U=windSpeed(zm,z0,ustar,L);
+  const peak=Fl/2;
+  const x90=peak*4;
+  const sigY90=(sigmav/U)*x90;
+  // Domain must contain the 90% extent plus crosswind spread, with 1.6x margin
+  const neededM=Math.max(x90, sigY90*2)*1.6;
+  const domain=Math.min(6000, Math.max(150, Math.ceil(neededM/10)*10));
+  return domain;
+}
+function computeGrid(P){
+  const{zm,z0,ustar,sigmav,L,windDir,nx}=P;
+  const zeta=L!==0?zm/L:0;
+  const Fl=calcFl(zm,z0,zeta);
+  const U=windSpeed(zm,z0,ustar,L);
+  // Dynamic domain: always fits the footprint with fine enough resolution
+  const domain=computeDomain(zm,z0,ustar,sigmav,L,nx);
+  const dx=(domain*2)/nx;
+  // wRad: met convention windDir = direction wind comes FROM (CW from North)
+  // (90-windDir) converts to math angle (CCW from East) so xW points upwind
+  const wRad=((90-windDir)*Math.PI)/180, cosW=Math.cos(wRad), sinW=Math.sin(wRad);
+  const grid=new Float32Array(nx*nx); let total=0;
+  for(let iy=0;iy<nx;iy++){
+    const y=dx*(iy+.5)-domain;
+    for(let ix=0;ix<nx;ix++){
+      const x=dx*(ix+.5)-domain;
+      const xW=x*cosW+y*sinW, yW=-x*sinW+y*cosW;
+      if(xW<=0.1) continue;
+      const fX=Math.exp(-Fl/xW)/(xW*xW);
+      const sY=Math.max(0.1,(sigmav/U)*xW);
+      const fY=Math.exp(-(yW*yW)/(2*sY*sY))/(Math.sqrt(2*Math.PI)*sY);
+      const f=fX*fY; grid[iy*nx+ix]=f; total+=f;
+    }
+  }
+  if(total>0) for(let i=0;i<grid.length;i++) grid[i]/=total;
+  const peak=Fl/2;
+  return{grid,nx,domain,dx,U,Fl,peak};
+}
+function getThresholds(grid,levels){
+  const vals=Array.from(grid).filter(v=>v>0).sort((a,b)=>b-a);
+  const total=vals.reduce((s,v)=>s+v,0);
+  const res={}; let cum=0,li=0;
+  for(const v of vals){
+    cum+=v;
+    while(li<levels.length&&cum/total>=levels[li]){res[levels[li]]=v;li++;}
+    if(li>=levels.length) break;
+  }
+  return res;
+}
+
+// ═══════════════════════════════════════════════════════
+//  GEO HELPERS
+// ═══════════════════════════════════════════════════════
+function mToDeg(m,lat,axis){
+  return axis==='lat'?m/111320:m/(111320*Math.cos(lat*Math.PI/180));
+}
+function offsetLL(lat,lon,dxM,dyM){
+  return{lat:lat+mToDeg(dyM,lat,'lat'),lon:lon+mToDeg(dxM,lat,'lon')};
+}
+
+// ═══════════════════════════════════════════════════════
+//  COLOR SCALE
+//  Perceptually balanced: log-scaled so both peak and edges show vivid color
+// ═══════════════════════════════════════════════════════
+const CS=[[8,48,107],[33,113,181],[66,174,88],[161,215,106],[255,255,102],[253,141,60],[215,25,28]];
+function toRGBA(v,mx){
+  if(v<=0) return [0,0,0,0];
+  // Log scale: maps the 4 orders-of-magnitude flux range to visible colors
+  // Cells with v > 1% of max get vivid color; below that fade to transparent
+  const logV=Math.log10(Math.max(v,mx*1e-4));
+  const logMx=Math.log10(mx);
+  const logMin=logMx-3.5; // show 3.5 decades of dynamic range
+  const t=Math.max(0,Math.min(1,(logV-logMin)/(logMx-logMin)));
+  if(t<0.05) return [0,0,0,0];
+  const n=CS.length;
+  const i=Math.min(n-2,Math.floor(t*(n-1))), fr=t*(n-1)-i;
+  const[r1,g1,b1]=CS[i],[r2,g2,b2]=CS[i+1];
+  const alpha=Math.round(Math.min(255, t*280));
+  return[Math.round(r1+fr*(r2-r1)),Math.round(g1+fr*(g2-g1)),Math.round(b1+fr*(b2-b1)),alpha];
+}
+
+// ═══════════════════════════════════════════════════════
+//  GEOTIFF — WGS84 / EPSG:4326
+// ═══════════════════════════════════════════════════════
+function writeTIFF_WGS84(floatData,width,height,lonTp,latTp,dLon,dLat){
+  const F4=4, dataBytes=width*height*F4;
+  const geoKeys=new Uint16Array([1,1,0,3, 1024,0,1,2, 1025,0,1,2, 2048,0,1,4326]);
+  const pixelScale=new Float64Array([dLon,dLat,0]);
+  const tiepoint=new Float64Array([0,0,0,lonTp,latTp,0]);
+  const N_IFD=14, IFD_OFFSET=8;
+  const IFD_PADDED=Math.ceil((2+N_IFD*12+4)/4)*4;
+  const offPS=IFD_OFFSET+IFD_PADDED, offTP=offPS+24, offGK=offTP+48, offData=offGK+32;
+  const buf=new ArrayBuffer(offData+dataBytes), dv=new DataView(buf), LE=true;
+  dv.setUint16(0,0x4949,LE); dv.setUint16(2,42,LE); dv.setUint32(4,IFD_OFFSET,LE);
+  let p=IFD_OFFSET; dv.setUint16(p,N_IFD,LE); p+=2;
+  function wt(tag,type,count,val){dv.setUint16(p,tag,LE);dv.setUint16(p+2,type,LE);dv.setUint32(p+4,count,LE);dv.setUint32(p+8,val>>>0,LE);p+=12;}
+  wt(256,4,1,width);wt(257,4,1,height);wt(258,3,1,32);wt(259,3,1,1);wt(262,3,1,1);
+  wt(273,4,1,offData);wt(277,3,1,1);wt(278,4,1,height);wt(279,4,1,dataBytes);
+  wt(284,3,1,1);wt(339,3,1,3);wt(33550,12,3,offPS);wt(33922,12,6,offTP);wt(34736,3,geoKeys.length,offGK);
+  dv.setUint32(p,0,LE);
+  new Float64Array(buf,offPS,3).set(pixelScale);
+  new Float64Array(buf,offTP,6).set(tiepoint);
+  new Uint16Array(buf,offGK,geoKeys.length).set(geoKeys);
+  new Float32Array(buf,offData,floatData.length).set(floatData);
+  return buf;
+}
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const P={zm:3.5,z0:0.1,ustar:0.4,sigmav:0.5,L:-50,windDir:225,nx:200};
+let towerLL=null, lastResult=null;
+let heatLayer=null, contourLayer=null;
+
+// ═══════════════════════════════════════════════════════
+//  LEAFLET MAP
+// ═══════════════════════════════════════════════════════
+const map=L.map('leaflet-map',{zoomControl:true,minZoom:1}).setView([38.5449,-121.7405],13);
+
+// Tile layer definitions
+const BASEMAPS={
+  light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
+    subdomains:'abcd', maxZoom:22, keepBuffer:4
+  }),
+  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA',
+    maxZoom:22, keepBuffer:4, crossOrigin:true,
+    errorTileUrl:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+  })
+};
+let activeBasemap='light';
+BASEMAPS.light.addTo(map);
+
+// Basemap switcher
+document.querySelectorAll('.bm-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const bm=btn.dataset.bm;
+    if(bm===activeBasemap) return;
+    map.removeLayer(BASEMAPS[activeBasemap]);
+    BASEMAPS[bm].addTo(map);
+    // Make sure overlays stay on top
+    if(heatLayer) heatLayer.bringToFront();
+    if(contourLayer) contourLayer.bringToFront();
+    if(towerMarker) towerMarker.bringToFront();
+    activeBasemap=bm;
+    document.querySelectorAll('.bm-btn').forEach(b=>b.classList.toggle('active',b.dataset.bm===bm));
+  });
+});
+
+const towerIcon=L.divIcon({
+  html:`<div style="width:24px;height:24px;background:radial-gradient(circle,#ff4444,#cc0000);border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(180,0,0,.5);transform:translate(-50%,-50%)"></div>`,
+  iconSize:[0,0], className:''
+});
+let towerMarker=null;
+
+map.on('click',e=>{
+  towerLL={lat:e.latlng.lat,lng:e.latlng.lng};
+  if(towerMarker) map.removeLayer(towerMarker);
+  towerMarker=L.marker([towerLL.lat,towerLL.lng],{icon:towerIcon}).addTo(map);
+
+  document.getElementById('map-hint').textContent='✓ Tower placed — footprint shown on map';
+  const cb=document.getElementById('coord-badge');
+  cb.style.display='block';
+  cb.textContent=`${towerLL.lat.toFixed(5)}°N   ${towerLL.lng.toFixed(5)}°E`;
+
+  document.getElementById('d-lat').textContent=towerLL.lat.toFixed(6)+'°';
+  document.getElementById('d-lon').textContent=towerLL.lng.toFixed(6)+'°';
+  document.getElementById('hc-loc').textContent=`${towerLL.lat.toFixed(3)}, ${towerLL.lng.toFixed(3)}`;
+  document.getElementById('export-btn').disabled=false;
+  document.getElementById('export-status').textContent='';
+
+  scheduleRender();
+});
+
+// ═══════════════════════════════════════════════════════
+//  HEATMAP IMAGE OVERLAY ON MAP
+//  Only renders cells within the 90% flux source area
+// ═══════════════════════════════════════════════════════
+function updateHeatOverlay(){
+  if(heatLayer){map.removeLayer(heatLayer);heatLayer=null;}
+  if(!towerLL||!lastResult||!document.getElementById('chk-overlay').checked) return;
+
+  const{grid,nx,domain}=lastResult;
+  const{lat,lng}=towerLL;
+
+  // Get the 90% threshold — cells below this are outside the source area
+  const thr90=getThresholds(grid,[0.9])[0.9]||0;
+  const mx=Math.max(...grid);
+
+  const oc=document.createElement('canvas');
+  oc.width=oc.height=nx;
+  const oct=oc.getContext('2d');
+  const img=oct.createImageData(nx,nx);
+
+  // Y-flip: draw north at top; mask cells outside 90% contour
+  for(let iy=0;iy<nx;iy++){
+    const srcRow=nx-1-iy;
+    for(let ix=0;ix<nx;ix++){
+      const v=grid[srcRow*nx+ix];
+      // Render only cells inside the 90% source area
+      const[r,g,b,a]=v>=thr90 ? toRGBA(v,mx) : [0,0,0,0];
+      const k=(iy*nx+ix)*4;
+      img.data[k]=r;img.data[k+1]=g;img.data[k+2]=b;img.data[k+3]=a;
+    }
+  }
+  oct.putImageData(img,0,0);
+
+  const sw=offsetLL(lat,lng,-domain,-domain);
+  const ne=offsetLL(lat,lng, domain, domain);
+  const bounds=L.latLngBounds([sw.lat,sw.lon],[ne.lat,ne.lon]);
+  heatLayer=L.imageOverlay(oc.toDataURL(),bounds,{
+    opacity:0.50,
+    zIndex:400
+  }).addTo(map);
+  heatLayer.bringToFront();
+}
+
+// ═══════════════════════════════════════════════════════
+//  BILINEAR UPSAMPLE — enlarges grid by factor k
+// ═══════════════════════════════════════════════════════
+function bilinearUpsample(grid, nx, k){
+  const nx2 = nx * k;
+  const out  = new Float32Array(nx2 * nx2);
+  for(let oy=0; oy<nx2; oy++){
+    const fy = (oy + 0.5) / k - 0.5;   // source float row
+    const iy0 = Math.max(0, Math.floor(fy));
+    const iy1 = Math.min(nx-1, iy0+1);
+    const ty  = fy - iy0;
+    for(let ox=0; ox<nx2; ox++){
+      const fx  = (ox + 0.5) / k - 0.5;
+      const ix0 = Math.max(0, Math.floor(fx));
+      const ix1 = Math.min(nx-1, ix0+1);
+      const tx  = fx - ix0;
+      const v00 = grid[iy0*nx+ix0], v10 = grid[iy0*nx+ix1];
+      const v01 = grid[iy1*nx+ix0], v11 = grid[iy1*nx+ix1];
+      out[oy*nx2+ox] = (1-ty)*((1-tx)*v00 + tx*v10)
+                     +    ty *((1-tx)*v01 + tx*v11);
+    }
+  }
+  return { grid:out, nx:nx2 };
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAUSSIAN SMOOTH — 5×5 kernel, σ=1.0
+//  Removes grid-axis bias so contours are elliptic not jagged
+// ═══════════════════════════════════════════════════════
+function gaussianSmooth(grid, nx){
+  // Pre-computed 5×5 Gaussian kernel (σ=1.0), normalised
+  const K=[
+    0.00296902, 0.01330621, 0.02193823, 0.01330621, 0.00296902,
+    0.01330621, 0.05963430, 0.09832033, 0.05963430, 0.01330621,
+    0.02193823, 0.09832033, 0.16210282, 0.09832033, 0.02193823,
+    0.01330621, 0.05963430, 0.09832033, 0.05963430, 0.01330621,
+    0.00296902, 0.01330621, 0.02193823, 0.01330621, 0.00296902
+  ];
+  const R=2; // kernel radius
+  const out=new Float32Array(nx*nx);
+  for(let iy=0;iy<nx;iy++){
+    for(let ix=0;ix<nx;ix++){
+      let sum=0, wsum=0;
+      for(let ky=-R;ky<=R;ky++){
+        const sy=iy+ky;
+        if(sy<0||sy>=nx) continue;
+        for(let kx=-R;kx<=R;kx++){
+          const sx=ix+kx;
+          if(sx<0||sx>=nx) continue;
+          const w=K[(ky+R)*5+(kx+R)];
+          sum+=grid[sy*nx+sx]*w;
+          wsum+=w;
+        }
+      }
+      out[iy*nx+ix]=wsum>0?sum/wsum:0;
+    }
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════
+//  SVG CONTOUR LINES ON MAP
+//  1. Bilinear upsample to high-res grid
+//  2. Interpolated marching squares (exact crossing position)
+//  3. Chain raw segments into polylines / polygons
+// ═══════════════════════════════════════════════════════
+function updateContourOverlay(){
+  if(contourLayer){map.removeLayer(contourLayer);contourLayer=null;}
+  if(!towerLL||!lastResult||!document.getElementById('chk-contours').checked) return;
+
+  const{grid:gridLow, nx:nxLow, domain}=lastResult;
+  const{lat,lng}=towerLL;
+  const thr=getThresholds(gridLow,[0.5,0.7,0.9]);
+
+  // Upsample grid for smooth contours (4× → 480×480 from nx=120)
+  const SCALE = 4;
+  const{grid:gridUp, nx} = bilinearUpsample(gridLow, nxLow, SCALE);
+  // Gaussian smooth → removes staircase, enforces elliptic iso-lines
+  const grid = gaussianSmooth(gridUp, nx);
+
+  // Recompute thresholds on upsampled grid — values are identical after
+  // bilinear interp preserves the flux density range, so low-res thresholds apply directly
+
+  const sw=offsetLL(lat,lng,-domain,-domain);
+  const ne=offsetLL(lat,lng, domain, domain);
+  const bounds=L.latLngBounds([sw.lat,sw.lon],[ne.lat,ne.lon]);
+
+  // stroke-width and dash are in SVG user-units (= grid cells of the upsampled nx×nx viewBox)
+  // At nx=480, 1 unit = 1 upsampled cell ≈ 1/480 of the domain.
+  // Use 0.35–0.5 cell width → thin, crisp lines.
+  const contourDefs=[
+    {lvl:0.5, color:'#cc2200', width:0.45, dash:''},
+    {lvl:0.7, color:'#e07b00', width:0.40, dash:`${1.8},${1.2}`},
+    {lvl:0.9, color:'#0077cc', width:0.35, dash:`${1.2},${1.2}`},
+  ];
+
+  let svgPaths='';
+
+  contourDefs.forEach(({lvl,color,width,dash})=>{
+    const th=thr[lvl]; if(!th) return;
+
+    // ── Interpolated marching-squares ────────────────────
+    // Each segment: [[x1,y1],[x2,y2]] in SVG grid coords
+    // SVG y-flip: grid iy=0=south → SVG y=nx (bottom); grid iy=nx-1=north → SVG y=0 (top)
+    // SVG coords: x = ix, y = nx-1-iy
+    // For interpolated crossings: t = (th - va) / (vb - va)  ∈ [0,1]
+    const rawSegs=[];
+
+    for(let iy=0;iy<nx-1;iy++){
+      for(let ix=0;ix<nx-1;ix++){
+        const vTL=grid[ iy   *nx+ix  ];
+        const vTR=grid[ iy   *nx+ix+1];
+        const vBL=grid[(iy+1)*nx+ix  ];
+        const vBR=grid[(iy+1)*nx+ix+1];
+
+        const cTL=vTL>=th?1:0, cTR=vTR>=th?1:0;
+        const cBL=vBL>=th?1:0, cBR=vBR>=th?1:0;
+        const idx=(cTL<<3)|(cTR<<2)|(cBR<<1)|cBL;
+        if(idx===0||idx===15) continue;
+
+        // SVG y coordinates (flipped: north at top)
+        const svgYT = nx-1-iy;     // top row of cell
+        const svgYB = nx-2-iy;     // bottom row of cell
+
+        // Interpolated edge crossing helpers
+        // t = (th-va)/(vb-va), clamped to [0,1]
+        const lerp=(va,vb)=>Math.max(0,Math.min(1,(th-va)/((vb-va)||1e-10)));
+
+        // Midpoints of 4 edges with interpolated positions:
+        const tTop  = lerp(vTL,vTR);
+        const tBott = lerp(vBL,vBR);
+        const tLeft = lerp(vTL,vBL);
+        const tRigh = lerp(vTR,vBR);
+
+        // SVG (x,y) of each edge crossing:
+        const mT=[ix+tTop,           svgYT              ]; // top edge
+        const mB=[ix+tBott,          svgYB              ]; // bottom edge
+        const mL=[ix,                svgYT-tLeft        ]; // left edge (y goes down in SVG)
+        const mR=[ix+1,              svgYT-tRigh        ]; // right edge
+
+        const table={
+          0:[],15:[],
+          1: [[mL,mB]], 14:[[mL,mB]],
+          2: [[mB,mR]], 13:[[mB,mR]],
+          3: [[mL,mR]], 12:[[mL,mR]],
+          4: [[mT,mR]], 11:[[mT,mR]],
+          5: [[mL,mT],[mB,mR]],
+          6: [[mT,mB]],  9:[[mT,mB]],
+          7: [[mL,mT]],  8:[[mL,mT]],
+          10:[[mL,mB],[mT,mR]],
+        };
+        (table[idx]||[]).forEach(s=>rawSegs.push(s));
+      }
+    }
+    if(!rawSegs.length) return;
+
+    // ── Chain segments into polylines ────────────────────
+    const pk=([x,y])=>`${x.toFixed(3)},${y.toFixed(3)}`;
+    const adj=new Map();
+    rawSegs.forEach((seg,i)=>{
+      [pk(seg[0]),pk(seg[1])].forEach(k=>{
+        if(!adj.has(k)) adj.set(k,[]);
+        adj.get(k).push(i);
+      });
+    });
+
+    const used=new Uint8Array(rawSegs.length);
+    const chains=[];
+
+    for(let s=0;s<rawSegs.length;s++){
+      if(used[s]) continue;
+      used[s]=1;
+      const chain=[...rawSegs[s]];
+
+      // Walk forward
+      let ext=true;
+      while(ext){
+        ext=false;
+        const tail=chain[chain.length-1];
+        for(const idx of(adj.get(pk(tail))||[])){
+          if(used[idx]) continue;
+          used[idx]=1;
+          const[a,b]=rawSegs[idx];
+          chain.push(pk(a)===pk(tail)?b:a);
+          ext=true; break;
+        }
+      }
+      // Walk backward
+      ext=true;
+      while(ext){
+        ext=false;
+        const head=chain[0];
+        for(const idx of(adj.get(pk(head))||[])){
+          if(used[idx]) continue;
+          used[idx]=1;
+          const[a,b]=rawSegs[idx];
+          chain.unshift(pk(a)===pk(head)?b:a);
+          ext=true; break;
+        }
+      }
+      if(chain.length>=2) chains.push(chain);
+    }
+
+    // ── Emit SVG elements ────────────────────────────────
+    const dashAttr = dash ? `stroke-dasharray="${dash}"` : '';
+    chains.forEach(pts=>{
+      const closed = pk(pts[0])===pk(pts[pts.length-1]);
+      const ptStr  = pts.map(([x,y])=>`${x.toFixed(3)},${y.toFixed(3)}`).join(' ');
+      if(closed){
+        svgPaths+=`<polygon points="${ptStr}" stroke="${color}" stroke-width="${width}" fill="none" ${dashAttr} stroke-linejoin="round"/>`;
+      } else {
+        svgPaths+=`<polyline points="${ptStr}" stroke="${color}" stroke-width="${width}" fill="none" ${dashAttr} stroke-linecap="round" stroke-linejoin="round"/>`;
+      }
+    });
+  });
+
+  const svgContent=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${nx} ${nx}" preserveAspectRatio="none">${svgPaths}</svg>`;
+  contourLayer=L.svgOverlay(
+    new DOMParser().parseFromString(svgContent,'image/svg+xml').documentElement,
+    bounds,{zIndex:500}
+  ).addTo(map);
+  contourLayer.bringToFront();
+}
+
+// ═══════════════════════════════════════════════════════
+//  FLOATING DETAIL CANVAS
+// ═══════════════════════════════════════════════════════
+//  DETAIL TAB — persistent, live, receives updates via postMessage
+// ═══════════════════════════════════════════════════════
+let detailTab = null;
+
+const DETAIL_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>EddyPrint — Detail View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f4f8;--panel:#ffffff;--border:#d0dce8;
+  --a1:#0077cc;--text:#1a2b3c;--text2:#3a5470;--muted:#6688aa;--dim:#99aabb;
+  --yellow:#e07b00;--red:#cc2200;--green:#1a8a3c;
+  --shadow:rgba(0,80,160,.10);
+}
+html,body{height:100%;background:var(--bg);font-family:'Inter',sans-serif;font-size:13px;color:var(--text);overflow:hidden;}
+#app{display:grid;grid-template-rows:56px 1fr 42px;height:100vh;}
+
+/* Header */
+header{
+  background:#fff;border-bottom:1px solid var(--border);
+  box-shadow:0 2px 8px var(--shadow);
+  display:flex;align-items:center;gap:16px;padding:0 24px;z-index:10;
+}
+header h1{font-size:15px;font-weight:800;color:var(--text);letter-spacing:.3px;}
+header p{font-size:10px;color:var(--muted);letter-spacing:1.5px;margin-top:2px;}
+.chips{margin-left:auto;display:flex;gap:20px;}
+.chip .lbl{font-size:9px;font-weight:700;color:var(--a1);letter-spacing:2px;text-transform:uppercase;}
+.chip .val{font-size:14px;font-weight:700;color:var(--text);margin-top:1px;}
+.chip .val.y{color:var(--yellow);}.chip .val.g{color:var(--green);}.chip .val.b{color:var(--a1);}
+
+/* Main layout */
+main{display:grid;grid-template-columns:1fr 220px;min-height:0;}
+
+/* Canvas area */
+#canvas-wrap{
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);padding:18px;position:relative;
+}
+#fp{
+  border-radius:12px;border:1.5px solid var(--border);
+  box-shadow:0 4px 24px var(--shadow);
+  cursor:crosshair;max-width:100%;max-height:100%;display:block;
+}
+
+/* Crosshair tooltip */
+#tooltip{
+  position:absolute;pointer-events:none;
+  background:rgba(255,255,255,.97);border:1.5px solid var(--a1);
+  border-radius:8px;padding:8px 14px;font-size:12px;
+  box-shadow:0 4px 14px var(--shadow);display:none;z-index:20;
+  min-width:200px;
+}
+#tooltip .t-coord{color:var(--muted);font-size:11px;margin-bottom:4px;}
+#tooltip .t-flux{font-size:15px;font-weight:700;color:var(--a1);margin-bottom:4px;}
+#tooltip .t-zone{font-size:12px;font-weight:600;}
+
+/* Right panel */
+#right{background:var(--panel);border-left:1px solid var(--border);padding:16px 14px;overflow-y:auto;}
+.sec{font-size:9px;font-weight:700;color:var(--a1);letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid #e8f3fb;padding-bottom:6px;margin-bottom:12px;margin-top:16px;}
+.sec:first-child{margin-top:0;}
+.metric{margin-bottom:14px;}
+.metric .ml{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;}
+.metric .mv{font-size:18px;font-weight:700;}
+.metric .ms{font-size:10px;color:var(--dim);margin-top:2px;}
+.param-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.param-name{font-size:11px;color:var(--text2);}
+.param-val{font-size:12px;font-weight:700;color:var(--a1);background:#e8f3fb;padding:1px 7px;border-radius:4px;}
+.fbar-wrap{margin-bottom:12px;}
+.fbar-label{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;}
+.fbar-track{height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.fbar-fill{height:100%;border-radius:3px;transition:width .4s;}
+.fbar-val{font-size:13px;font-weight:700;margin-top:3px;}
+.fbar-area{font-size:10px;color:var(--dim);}
+.legend-item{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:11px;font-weight:500;color:var(--text2);}
+.legend-line{flex-shrink:0;}
+
+/* Status bar */
+#statusbar{
+  background:#fff;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:20px;padding:0 20px;
+  font-size:11px;color:var(--muted);
+}
+#statusbar .sb-item b{color:var(--text);}
+#waiting{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;color:var(--muted);gap:12px;
+}
+#waiting .w-icon{font-size:48px;}
+#waiting p{font-size:14px;}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div>
+    <h1>🌬 EddyPrint — Live Detail View</h1>
+    <p>HSIEH 2000 · NORTH-UP · LIVE HOVER INSPECTION</p>
+  </div>
+  <div class="chips">
+    <div class="chip"><div class="lbl">Stability</div><div class="val g" id="c-stab">—</div></div>
+    <div class="chip"><div class="lbl">Peak ↗</div><div class="val y" id="c-peak">—</div></div>
+    <div class="chip"><div class="lbl">Wind Dir</div><div class="val b" id="c-wdir">—</div></div>
+    <div class="chip"><div class="lbl">Domain</div><div class="val" id="c-domain">—</div></div>
+  </div>
+</header>
+
+<main>
+  <div id="canvas-wrap">
+    <div id="waiting">
+      <div class="w-icon">🌬</div>
+      <p>Waiting for simulation data from model tab…</p>
+      <p style="font-size:12px;color:var(--dim)">Place a tower on the map to begin</p>
+    </div>
+    <canvas id="fp" style="display:none"></canvas>
+    <div id="tooltip">
+      <div class="t-coord" id="tt-coord">—</div>
+      <div class="t-flux" id="tt-flux">—</div>
+      <div class="t-zone" id="tt-zone">—</div>
+    </div>
+  </div>
+
+  <div id="right">
+    <div class="sec">Parameters</div>
+    <div class="param-row"><span class="param-name">Height z<sub>m</sub></span><span class="param-val" id="p-zm">—</span></div>
+    <div class="param-row"><span class="param-name">Roughness z₀</span><span class="param-val" id="p-z0">—</span></div>
+    <div class="param-row"><span class="param-name">Friction vel. u*</span><span class="param-val" id="p-ustar">—</span></div>
+    <div class="param-row"><span class="param-name">Lateral wind σᵥ</span><span class="param-val" id="p-sigmav">—</span></div>
+    <div class="param-row"><span class="param-name">Obukhov L</span><span class="param-val" id="p-L">—</span></div>
+    <div class="param-row"><span class="param-name">Wind direction</span><span class="param-val" id="p-wdir">—</span></div>
+
+    <div class="sec">Key Metrics</div>
+    <div class="metric">
+      <div class="ml">Peak Distance</div>
+      <div class="mv" id="m-peak" style="color:var(--yellow)">—</div>
+      <div class="ms">upwind of tower</div>
+    </div>
+    <div class="metric">
+      <div class="ml">Wind Speed (z<sub>m</sub>)</div>
+      <div class="mv" id="m-wind" style="color:var(--a1)">—</div>
+      <div class="ms">log-law estimate</div>
+    </div>
+    <div class="metric">
+      <div class="ml">Stability</div>
+      <div class="mv" id="m-stab" style="color:var(--green);font-size:13px;padding-top:2px">—</div>
+    </div>
+
+    <div class="sec">Source Areas</div>
+    <div class="fbar-wrap">
+      <div class="fbar-label">50% Source Area</div>
+      <div class="fbar-track"><div class="fbar-fill" id="f50" style="background:#e8500a;width:0%"></div></div>
+      <div class="fbar-val" id="v50" style="color:#e8500a">—</div>
+      <div class="fbar-area" id="a50">—</div>
+    </div>
+    <div class="fbar-wrap">
+      <div class="fbar-label">70% Source Area</div>
+      <div class="fbar-track"><div class="fbar-fill" id="f70" style="background:var(--yellow);width:0%"></div></div>
+      <div class="fbar-val" id="v70" style="color:var(--yellow)">—</div>
+      <div class="fbar-area" id="a70">—</div>
+    </div>
+    <div class="fbar-wrap">
+      <div class="fbar-label">90% Source Area</div>
+      <div class="fbar-track"><div class="fbar-fill" id="f90" style="background:#5580aa;width:0%"></div></div>
+      <div class="fbar-val" id="v90" style="color:#5580aa">—</div>
+      <div class="fbar-area" id="a90">—</div>
+    </div>
+
+    <div class="sec">Legend</div>
+    <div class="legend-item">
+      <svg class="legend-line" width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#cc2200" stroke-width="2.5"/></svg>
+      50% flux contour
+    </div>
+    <div class="legend-item">
+      <svg class="legend-line" width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#e07b00" stroke-width="2" stroke-dasharray="7,4"/></svg>
+      70% flux contour
+    </div>
+    <div class="legend-item">
+      <svg class="legend-line" width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="#0077cc" stroke-width="1.8" stroke-dasharray="4,4"/></svg>
+      90% flux contour
+    </div>
+  </div>
+</main>
+
+<div id="statusbar">
+  <span class="sb-item" id="sb-loc">📍 <b>Location:</b> —</span>
+  <span class="sb-item" id="sb-cell">🖱 <b>Cell:</b> hover over footprint</span>
+  <span class="sb-item" id="sb-time">⏱ <b>Updated:</b> —</span>
+</div>
+</div>
+
+<scr\x69pt>
+let STATE = null;
+const SZ = 700;
+
+// ── Color scale (same as parent) ──
+const CS=[[8,48,107],[33,113,181],[66,174,88],[161,215,106],[255,255,102],[253,141,60],[215,25,28]];
+function toRGBA(v,mx){
+  if(v<=0) return [0,0,0,0];
+  const logV=Math.log10(Math.max(v,mx*1e-4));
+  const logMx=Math.log10(mx), logMin=logMx-3.5;
+  const t=Math.max(0,Math.min(1,(logV-logMin)/(logMx-logMin)));
+  if(t<0.05) return [0,0,0,0];
+  const n=CS.length, i=Math.min(n-2,Math.floor(t*(n-1))), fr=t*(n-1)-i;
+  const[r1,g1,b1]=CS[i],[r2,g2,b2]=CS[i+1];
+  return[Math.round(r1+fr*(r2-r1)),Math.round(g1+fr*(g2-g1)),Math.round(b1+fr*(b2-b1)),Math.round(Math.min(255,t*280))];
+}
+
+// ── Bilinear upsample ──
+function bilinearUpsample(grid,nx,k){
+  const nx2=nx*k; const out=new Float32Array(nx2*nx2);
+  for(let oy=0;oy<nx2;oy++){
+    const fy=(oy+.5)/k-.5;
+    const iy0=Math.max(0,Math.floor(fy)),iy1=Math.min(nx-1,iy0+1),ty=fy-iy0;
+    for(let ox=0;ox<nx2;ox++){
+      const fx=(ox+.5)/k-.5;
+      const ix0=Math.max(0,Math.floor(fx)),ix1=Math.min(nx-1,ix0+1),tx=fx-ix0;
+      const v00=grid[iy0*nx+ix0],v10=grid[iy0*nx+ix1],v01=grid[iy1*nx+ix0],v11=grid[iy1*nx+ix1];
+      out[oy*nx2+ox]=(1-ty)*((1-tx)*v00+tx*v10)+ty*((1-tx)*v01+tx*v11);
+    }
+  }
+  return{grid:out,nx:nx2};
+}
+
+// ── Gaussian smooth ──
+function gaussianSmooth(grid,nx){
+  const K=[0.00297,0.01331,0.02194,0.01331,0.00297,0.01331,0.05963,0.09832,0.05963,0.01331,0.02194,0.09832,0.16210,0.09832,0.02194,0.01331,0.05963,0.09832,0.05963,0.01331,0.00297,0.01331,0.02194,0.01331,0.00297];
+  const R=2; const out=new Float32Array(nx*nx);
+  for(let iy=0;iy<nx;iy++) for(let ix=0;ix<nx;ix++){
+    let sum=0,ws=0;
+    for(let ky=-R;ky<=R;ky++){const sy=iy+ky;if(sy<0||sy>=nx)continue;
+      for(let kx=-R;kx<=R;kx++){const sx=ix+kx;if(sx<0||sx>=nx)continue;
+        const w=K[(ky+R)*5+(kx+R)];sum+=grid[sy*nx+sx]*w;ws+=w;}}
+    out[iy*nx+ix]=ws>0?sum/ws:0;
+  }
+  return out;
+}
+
+// ── Threshold computation ──
+function getThresholds(grid,levels){
+  const vals=Array.from(grid).filter(v=>v>0).sort((a,b)=>b-a);
+  const total=vals.reduce((s,v)=>s+v,0);
+  const res={};let cum=0,li=0;
+  for(const v of vals){cum+=v;while(li<levels.length&&cum/total>=levels[li]){res[levels[li]]=v;li++;}if(li>=levels.length)break;}
+  return res;
+}
+
+// ── Canvas rendering ──
+const canvas = document.getElementById('fp');
+const ctx    = canvas.getContext('2d');
+
+function renderCanvas(state){
+  const{grid,nx,domain,dx,peak,windDir,thr90}=state;
+  canvas.width=canvas.height=SZ;
+  const cellPx=SZ/nx;
+  const maxF=Math.max(...grid);
+  const thr=getThresholds(grid,[0.5,0.7,0.9]);
+
+  // Background
+  ctx.fillStyle='#f0f4f8'; ctx.fillRect(0,0,SZ,SZ);
+
+  // Grid lines
+  ctx.strokeStyle='rgba(0,80,160,.06)'; ctx.lineWidth=0.5;
+  for(let g=1;g<4;g++){const pos=(SZ/4)*g;ctx.beginPath();ctx.moveTo(pos,0);ctx.lineTo(pos,SZ);ctx.stroke();ctx.beginPath();ctx.moveTo(0,pos);ctx.lineTo(SZ,pos);ctx.stroke();}
+
+  // Heatmap — north-up (Y-flip: srcRow=nx-1-iy)
+  const img=ctx.createImageData(SZ,SZ);
+  const cp=Math.ceil(cellPx);
+  for(let iy=0;iy<nx;iy++){
+    const srcRow=nx-1-iy;
+    for(let ix=0;ix<nx;ix++){
+      const v=grid[srcRow*nx+ix];
+      if(v<thr90) continue;
+      const[r,g,b,a]=toRGBA(v,maxF);
+      const px=Math.round(ix*cellPx),py=Math.round(iy*cellPx);
+      for(let pj=py;pj<Math.min(py+cp,SZ);pj++)
+        for(let pi=px;pi<Math.min(px+cp,SZ);pi++){
+          const k=(pj*SZ+pi)*4;
+          if(a>img.data[k+3]){img.data[k]=r;img.data[k+1]=g;img.data[k+2]=b;img.data[k+3]=a;}
+        }
+    }
+  }
+  ctx.putImageData(img,0,0);
+
+  // Contours — bilinear + Gaussian + marching-squares (Y-flipped)
+  const CSCALE=3;
+  const{grid:cgu,nx:cnx}=bilinearUpsample(grid,nx,CSCALE);
+  const cgrid=gaussianSmooth(cgu,cnx);
+  const ccellPx=SZ/cnx;
+  const clvls=[{l:.5,col:'#cc2200',lw:2.2,dash:[]},{l:.7,col:'#e07b00',lw:1.8,dash:[8,4]},{l:.9,col:'#0077cc',lw:1.5,dash:[4,4]}];
+  clvls.forEach(({l,col,lw,dash})=>{
+    const th=thr[l]; if(!th) return;
+    const rawSegs=[];
+    for(let iy=0;iy<cnx-1;iy++){
+      const sY0=cnx-1-iy,sY1=cnx-2-iy;
+      for(let ix=0;ix<cnx-1;ix++){
+        const vTL=cgrid[sY0*cnx+ix],vTR=cgrid[sY0*cnx+ix+1],vBL=cgrid[sY1*cnx+ix],vBR=cgrid[sY1*cnx+ix+1];
+        const cTL=vTL>=th?1:0,cTR=vTR>=th?1:0,cBL=vBL>=th?1:0,cBR=vBR>=th?1:0;
+        const idx=(cTL<<3)|(cTR<<2)|(cBR<<1)|cBL;
+        if(idx===0||idx===15) continue;
+        function lerp(va,vb){return Math.max(0,Math.min(1,(th-va)/(vb-va)||0));}
+        const tT=lerp(vTL,vTR),tB=lerp(vBL,vBR),tL=lerp(vTL,vBL),tR=lerp(vTR,vBR);
+        const mT=[(ix+tT)*ccellPx,iy*ccellPx],mB=[(ix+tB)*ccellPx,(iy+1)*ccellPx];
+        const mL=[ix*ccellPx,(iy+tL)*ccellPx],mR=[(ix+1)*ccellPx,(iy+tR)*ccellPx];
+        const table={0:[],15:[],1:[[mL,mB]],14:[[mL,mB]],2:[[mB,mR]],13:[[mB,mR]],3:[[mL,mR]],12:[[mL,mR]],4:[[mT,mR]],11:[[mT,mR]],5:[[mL,mT],[mB,mR]],6:[[mT,mB]],9:[[mT,mB]],7:[[mL,mT]],8:[[mL,mT]],10:[[mL,mB],[mT,mR]]};
+        (table[idx]||[]).forEach(s=>rawSegs.push(s));
+      }
+    }
+    const pk=([x,y])=>x.toFixed(2)+','+y.toFixed(2);
+    const adj=new Map();
+    rawSegs.forEach((seg,i)=>{[pk(seg[0]),pk(seg[1])].forEach(k=>{if(!adj.has(k))adj.set(k,[]);adj.get(k).push(i);});});
+    const used=new Uint8Array(rawSegs.length);
+    ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.setLineDash(dash);
+    for(let s=0;s<rawSegs.length;s++){
+      if(used[s])continue;used[s]=1;
+      const chain=[...rawSegs[s]];
+      let ext=true;while(ext){ext=false;const t=chain[chain.length-1];for(const i of(adj.get(pk(t))||[])){if(used[i])continue;used[i]=1;const[a,b]=rawSegs[i];chain.push(pk(a)===pk(t)?b:a);ext=true;break;}}
+      ext=true;while(ext){ext=false;const h=chain[0];for(const i of(adj.get(pk(h))||[])){if(used[i])continue;used[i]=1;const[a,b]=rawSegs[i];chain.unshift(pk(a)===pk(h)?b:a);ext=true;break;}}
+      if(chain.length<2)continue;
+      ctx.beginPath();ctx.moveTo(chain[0][0],chain[0][1]);
+      for(let i=1;i<chain.length;i++)ctx.lineTo(chain[i][0],chain[i][1]);
+      if(pk(chain[0])===pk(chain[chain.length-1]))ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  });
+
+  // Scale bar
+  const scM=Math.round(domain/4),scPx=(scM/(domain*2))*SZ;
+  ctx.fillStyle='rgba(20,50,100,.75)';
+  ctx.fillRect(20,SZ-28,scPx,3);ctx.fillRect(20,SZ-33,2,11);ctx.fillRect(20+scPx,SZ-33,2,11);
+  ctx.font='bold 13px Inter,sans-serif';ctx.textAlign='left';ctx.fillText(scM+' m',20,SZ-37);
+
+  // Cardinal axes labels
+  ctx.font='bold 11px Inter,sans-serif'; ctx.fillStyle='rgba(60,90,130,.5)'; ctx.textAlign='center';
+  ctx.fillText('+'+domain+'m',SZ-30,SZ/2); ctx.fillText('-'+domain+'m',30,SZ/2);
+  ctx.fillText('+'+domain+'m',SZ/2,16);    ctx.fillText('-'+domain+'m',SZ/2,SZ-6);
+
+  // Tower
+  const cx=SZ/2,cy=SZ/2;
+  ctx.beginPath();ctx.moveTo(cx,cy-18);ctx.lineTo(cx-9,cy+7);ctx.lineTo(cx+9,cy+7);ctx.closePath();
+  ctx.fillStyle='#cc2200';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy+7,5.5,0,Math.PI*2);
+  ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#cc2200';ctx.lineWidth=1.5;ctx.stroke();
+
+  // Compass rose (top-left corner)
+  const rx=52,ry=52,rr=30;
+  ctx.save();
+  ctx.fillStyle='rgba(255,255,255,.92)';
+  ctx.beginPath();ctx.arc(rx,ry,rr+7,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#d0dce8';ctx.lineWidth=1.2;ctx.stroke();
+  [['N',0,-1],['S',0,1],['E',1,0],['W',-1,0]].forEach(([lbl,dx2,dy2])=>{
+    ctx.font='bold 11px Inter,sans-serif';ctx.textAlign='center';ctx.fillStyle='#6688aa';
+    ctx.fillText(lbl,rx+dx2*(rr-3),ry+dy2*(rr-3)+4);
+  });
+  // Wind arrow: rotate by windDir (CW from North = met convention)
+  ctx.save();ctx.translate(rx,ry);ctx.rotate(windDir*Math.PI/180);
+  ctx.strokeStyle='#0077cc';ctx.lineWidth=3;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(0,16);ctx.lineTo(0,-15);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-22);ctx.lineTo(-7,-12);ctx.lineTo(7,-12);ctx.closePath();
+  ctx.fillStyle='#0077cc';ctx.fill();
+  ctx.strokeStyle='#0077cc';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(-5,16);ctx.lineTo(5,16);ctx.stroke();
+  ctx.restore();ctx.restore();
+
+  // N ↑ label (top-right)
+  ctx.font='bold 14px Inter,sans-serif';ctx.textAlign='right';ctx.fillStyle='#3a5470';
+  ctx.fillText('N ↑',SZ-14,26);
+
+  // Peak distance line (along wind direction, north-up)
+  // Draw a dashed line from tower to peak position
+  const wRad=((90-windDir)*Math.PI)/180; // math angle from (90-windDir)
+  // In canvas coords (north-up, y increases down):
+  // Math +y = North = canvas -y. Math direction angle:
+  // windDir=0(from N) → upwind is North → dx_canvas=0, dy_canvas=-peak
+  const peakPxX=cx + (peak/domain)*(SZ/2)*Math.sin((windDir)*Math.PI/180);
+  const peakPxY=cy - (peak/domain)*(SZ/2)*Math.cos((windDir)*Math.PI/180);
+  ctx.strokeStyle='rgba(0,80,180,.4)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(peakPxX,peakPxY);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(peakPxX,peakPxY,4,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,80,180,.7)';ctx.fill();
+  // Label
+  ctx.font='11px Inter,sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(0,80,180,.85)';
+  ctx.fillText('peak '+peak.toFixed(0)+'m',peakPxX+(peakPxX>cx?24:-24),peakPxY+(peakPxY<cy?-8:12));
+}
+
+// ── Update right-panel stats ──
+function updateStats(state){
+  const{P:p,domain,dx,nx,peak,U,regime,grid}=state;
+  document.getElementById('c-stab').textContent=regime;
+  document.getElementById('c-peak').textContent=peak.toFixed(0)+'m';
+  document.getElementById('c-wdir').textContent=p.windDir+'°';
+  document.getElementById('c-domain').textContent='±'+domain+'m';
+  document.getElementById('p-zm').textContent=p.zm+' m';
+  document.getElementById('p-z0').textContent=p.z0+' m';
+  document.getElementById('p-ustar').textContent=p.ustar+' m/s';
+  document.getElementById('p-sigmav').textContent=p.sigmav+' m/s';
+  document.getElementById('p-L').textContent=p.L+' m';
+  document.getElementById('p-wdir').textContent=p.windDir+'°';
+  document.getElementById('m-peak').textContent=peak.toFixed(0)+' m';
+  document.getElementById('m-wind').textContent=U.toFixed(2)+' m/s';
+  document.getElementById('m-stab').textContent=regime;
+  const thr=getThresholds(grid,[.5,.7,.9]),cellArea=dx*dx,maxC=nx*nx;
+  for(const[lvl,fi,vi,ai]of[[.5,'f50','v50','a50'],[.7,'f70','v70','a70'],[.9,'f90','v90','a90']]){
+    const th=thr[lvl]||0;let cnt=0;
+    for(let i=0;i<grid.length;i++)if(grid[i]>=th)cnt++;
+    const area=cnt*cellArea;
+    document.getElementById(fi).style.width=(Math.min(100,(cnt/maxC)*400).toFixed(0))+'%';
+    document.getElementById(vi).textContent=(area/10000).toFixed(2)+' ha';
+    document.getElementById(ai).textContent=cnt+' cells · '+area.toFixed(0)+' m²';
+  }
+  document.getElementById('sb-loc').innerHTML='📍 <b>Location:</b> '+(state.locStr||'No tower placed');
+  document.getElementById('sb-time').innerHTML='⏱ <b>Updated:</b> '+new Date().toLocaleTimeString();
+}
+
+// ── Handle incoming messages from parent ──
+window.addEventListener('message',e=>{
+  if(!e.data||e.data.type!=='EC_UPDATE') return;
+  STATE=e.data;
+
+  // Reconstruct Float32Array from plain array (postMessage serialises typed arrays)
+  STATE.grid=new Float32Array(STATE.grid);
+
+  // Compute thr90 here
+  const thr=getThresholds(STATE.grid,[0.9]);
+  STATE.thr90=thr[0.9]||0;
+
+  document.getElementById('waiting').style.display='none';
+  const c=document.getElementById('fp');
+  c.style.display='block';
+
+  renderCanvas(STATE);
+  updateStats(STATE);
+});
+
+// ── Hover inspection ──
+const tooltip=document.getElementById('tooltip');
+document.getElementById('fp').addEventListener('mousemove',e=>{
+  if(!STATE) return;
+  const{grid,nx,domain,dx,thr90}=STATE;
+  const rect=canvas.getBoundingClientRect();
+  const scX=canvas.width/rect.width,scY=canvas.height/rect.height;
+  const pixX=(e.clientX-rect.left)*scX, pixY=(e.clientY-rect.top)*scY;
+  const cellPx=canvas.width/nx;
+  const ix=Math.floor(pixX/cellPx), iy=Math.floor(pixY/cellPx);
+  if(ix<0||ix>=nx||iy<0||iy>=nx){tooltip.style.display='none';return;}
+  // Y-flip: canvas iy=0 is north (grid row nx-1-iy)
+  const srcRow=nx-1-iy;
+  const v=grid[srcRow*nx+ix];
+  const xM=(dx*(ix+.5)-domain).toFixed(1);
+  const yM=(dx*(srcRow+.5)-domain).toFixed(1); // geographic y (north positive)
+  const fv=(v*1e6).toFixed(4);
+  const thr=getThresholds(grid,[0.5,0.7,0.9]);
+  const zone=v<(thr[0.9]||0)?'Outside 90%':v<(thr[0.7]||0)?'90% zone':v<(thr[0.5]||0)?'70% zone':'50% zone';
+  const zoneColor=v<(thr[0.9]||0)?'var(--dim)':v<(thr[0.7]||0)?'#0077cc':v<(thr[0.5]||0)?'var(--yellow)':'#e8500a';
+
+  document.getElementById('tt-coord').textContent='x: '+xM+'m (E+)  ·  y: '+yM+'m (N+)';
+  document.getElementById('tt-flux').textContent='Flux: '+fv+' ×10⁻⁶';
+  document.getElementById('tt-zone').textContent=zone;
+  document.getElementById('tt-zone').style.color=zoneColor;
+  document.getElementById('sb-cell').innerHTML='🖱 <b>Cell:</b> x='+xM+'m, y='+yM+'m · flux='+fv+'×10⁻⁶ · '+zone;
+
+  // Position tooltip (smart: avoid edges)
+  const tW=220,tH=80;
+  let tx=e.clientX+14, ty=e.clientY-20;
+  if(tx+tW>window.innerWidth-10) tx=e.clientX-tW-10;
+  if(ty+tH>window.innerHeight-10) ty=e.clientY-tH-10;
+  tooltip.style.left=tx+'px'; tooltip.style.top=ty+'px';
+  tooltip.style.display=v>0?'block':'none';
+});
+document.getElementById('fp').addEventListener('mouseleave',()=>{
+  tooltip.style.display='none';
+  document.getElementById('sb-cell').innerHTML='🖱 <b>Cell:</b> hover over footprint';
+});
+</scr\x69pt>
+</body>
+</html>`;
+
+function openOrUpdateDetailTab(){
+  // Open the tab once; reuse it on every subsequent call
+  if(!detailTab || detailTab.closed){
+    detailTab = window.open('', 'ec_detail_tab');
+    if(!detailTab){
+      alert('Pop-up blocked. Please allow pop-ups for this page.');
+      return;
+    }
+    detailTab.document.open();
+    detailTab.document.write(DETAIL_HTML);
+    detailTab.document.close();
+    // Give it a moment to parse, then send data
+    setTimeout(pushToDetailTab, 400);
+  } else {
+    pushToDetailTab();
+  }
+}
+
+function pushToDetailTab(){
+  if(!detailTab || detailTab.closed || !lastResult) return;
+  const{grid,nx,domain,dx,peak,U,Fl}=lastResult;
+  const{zm,L,windDir}=P;
+  const zeta=L!==0?zm/L:0;
+  const regime=L===0?'Neutral':L<-200?'Free Conv.':L<0?'Unstable':L<200?'Stable':'Near-Neutral';
+  const locStr=towerLL?`${towerLL.lat.toFixed(5)}°N, ${towerLL.lng.toFixed(5)}°E`:null;
+  detailTab.postMessage({
+    type:'EC_UPDATE',
+    grid:Array.from(grid),  // serialise Float32Array
+    nx, domain, dx, peak, U, regime, windDir, locStr,
+    P:{zm:P.zm,z0:P.z0,ustar:P.ustar,sigmav:P.sigmav,L:P.L,windDir:P.windDir}
+  },'*');
+}
+
+// ═══════════════════════════════════════════════════════
+//  COORD AUDIT
+// ═══════════════════════════════════════════════════════
+function updateCoordAudit(){
+  if(!towerLL||!lastResult) return;
+  const{nx,dx,domain}=lastResult;
+  const{lat,lng}=towerLL;
+  const dLat=mToDeg(dx,lat,'lat'), dLon=mToDeg(dx,lat,'lon');
+  const lonTp=lng-(nx/2)*dLon, latTp=lat+(nx/2)*dLat;
+  const bboxW=lonTp-.5*dLon, bboxE=lonTp+nx*dLon-.5*dLon;
+  const bboxN=latTp+.5*dLat, bboxS=latTp-nx*dLat+.5*dLat;
+  document.getElementById('coord-verify').style.display='block';
+  document.getElementById('cv-latlon').textContent=`${lat.toFixed(6)}°N  ${lng.toFixed(6)}°E`;
+  document.getElementById('cv-tp').textContent=`${lonTp.toFixed(6)}°E  ${latTp.toFixed(6)}°N`;
+  document.getElementById('cv-bbox-lon').textContent=`W ${bboxW.toFixed(5)}° – E ${bboxE.toFixed(5)}°`;
+  document.getElementById('cv-bbox-lat').textContent=`S ${bboxS.toFixed(5)}° – N ${bboxN.toFixed(5)}°`;
+  document.getElementById('cv-dx').textContent=`dLon ${dLon.toExponential(3)}° · dLat ${dLat.toExponential(3)}°`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  WIND COMPASS — small arrow in map corner
+// ═══════════════════════════════════════════════════════
+function updateWindCompass(){
+  // windDir = direction wind comes FROM (met convention, CW from North)
+  // Arrow points FROM wind source direction toward tower
+  // Rotate the SVG group by windDir degrees (CW from North = standard SVG rotation)
+  document.getElementById('wind-arrow-g').setAttribute('transform',`rotate(${P.windDir})`);
+  document.getElementById('wind-dir-label').textContent=P.windDir+'°';
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+function render(){
+  lastResult=computeGrid(P);
+  const{grid,nx,domain,dx,U,Fl,peak}=lastResult;
+
+  updateHeatOverlay();  updateContourOverlay();
+
+  const{zm,L}=P;
+  const zeta=L!==0?zm/L:0;
+  const regime=L===0?'Neutral':L<-200?'Free Conv.':L<0?'Unstable':L<200?'Stable':'Near-Neutral';
+  document.getElementById('hc-stab').textContent=regime;
+  document.getElementById('hc-peak').textContent=peak.toFixed(0)+'m';
+  document.getElementById('m-peak').textContent=peak.toFixed(0)+'m';
+  document.getElementById('m-wind').textContent=U.toFixed(2)+' m/s';
+  document.getElementById('m-stab').textContent=regime;
+
+  const thr=getThresholds(grid,[.5,.7,.9]), cellArea=dx*dx, maxC=nx*nx;
+  for(const[lvl,fbi,fvi,fai]of[[.5,'fb-50','fv-50','fa-50'],[.7,'fb-70','fv-70','fa-70'],[.9,'fb-90','fv-90','fa-90']]){
+    const th=thr[lvl]||0; let cnt=0;
+    for(let i=0;i<grid.length;i++) if(grid[i]>=th) cnt++;
+    const a=cnt*cellArea;
+    document.getElementById(fbi).style.width=(Math.min(100,(cnt/maxC)*400).toFixed(0))+'%';
+    document.getElementById(fvi).textContent=(a/10000).toFixed(2)+' ha';
+    document.getElementById(fai).textContent=`${cnt} cells · ${a.toFixed(0)} m²`;
+  }
+  updateCoordAudit();
+  updateWindCompass();
+  // Push live update to detail tab if open
+  if(detailTab && !detailTab.closed) pushToDetailTab();
+}
+
+let raf=null;
+function scheduleRender(){if(raf) cancelAnimationFrame(raf); raf=requestAnimationFrame(render);}
+
+// ═══════════════════════════════════════════════════════
+//  SLIDER WIRING
+// ═══════════════════════════════════════════════════════
+[['zm',v=>(+v).toFixed(1)],['z0',v=>(+v).toFixed(3)],['ustar',v=>(+v).toFixed(2)],
+ ['sigmav',v=>(+v).toFixed(2)],['L',v=>String(+v)],['windDir',v=>String(+v)],
+ ['nx',v=>String(+v)]
+].forEach(([k,fmt])=>{
+  document.getElementById('s-'+k).addEventListener('input',e=>{
+    P[k]=parseFloat(e.target.value);
+    document.getElementById('v-'+k).textContent=fmt(e.target.value);
+    if(k==='nx') document.getElementById('v-nx2').textContent=e.target.value;
+    scheduleRender();
+  });
+});
+
+document.getElementById('chk-overlay').addEventListener('change',()=>{
+  if(!document.getElementById('chk-overlay').checked){if(heatLayer){map.removeLayer(heatLayer);heatLayer=null;}}
+  else updateHeatOverlay();
+});
+document.getElementById('chk-contours').addEventListener('change',()=>{
+  if(!document.getElementById('chk-contours').checked){if(contourLayer){map.removeLayer(contourLayer);contourLayer=null;}}
+  else updateContourOverlay();
+});
+// Detail tab button
+document.getElementById('btn-toggle-detail').addEventListener('click', openOrUpdateDetailTab);
+
+// ═══════════════════════════════════════════════════════
+//  AUTO ZOOM to footprint after tower placed
+// ═══════════════════════════════════════════════════════
+function zoomToFootprint(){
+  if(!towerLL||!lastResult) return;
+  const domain=lastResult.domain;
+  const{lat,lng}=towerLL;
+  const sw=offsetLL(lat,lng,-domain*1.5,-domain*1.5);
+  const ne=offsetLL(lat,lng, domain*1.5, domain*1.5);
+  map.fitBounds([[sw.lat,sw.lon],[ne.lat,ne.lon]],{animate:true,duration:.6});
+}
+
+let firstPlace=true;
+map.on('click',()=>{
+  if(firstPlace&&towerLL){
+    firstPlace=false;
+    setTimeout(()=>{
+      zoomToFootprint();
+      document.getElementById('btn-toggle-detail').style.display='block';
+      // Open detail tab behind (focus returns to parent immediately)
+      openOrUpdateDetailTab();
+      window.focus();
+    },150);
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+//  GEOTIFF EXPORT
+// ═══════════════════════════════════════════════════════
+document.getElementById('export-btn').addEventListener('click',function(){
+  const btn=document.getElementById('export-btn');
+  const status=document.getElementById('export-status');
+  if(!towerLL){status.style.color='var(--red)';status.textContent='⚠ Place tower first';return;}
+  try{
+    btn.disabled=true;status.style.color='var(--a1)';status.textContent='Building GeoTIFF…';
+    const{grid,nx,domain,dx}=lastResult;
+    const{lat,lng}=towerLL;
+    const dLat=mToDeg(dx,lat,'lat'), dLon=mToDeg(dx,lat,'lon');
+    const lonTp=lng-(nx/2)*dLon, latTp=lat+(nx/2)*dLat;
+    const flipped=new Float32Array(nx*nx);
+    for(let iy=0;iy<nx;iy++){const s=nx-1-iy;flipped.set(grid.subarray(s*nx,(s+1)*nx),iy*nx);}
+    const buf=writeTIFF_WGS84(flipped,nx,nx,lonTp,latTp,dLon,dLat);
+    const blob=new Blob([buf],{type:'image/tiff'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.style.display='none';
+    const ds=new Date().toISOString().slice(0,19).replace(/[T:]/g,'-');
+    a.href=url;a.download=`ec_footprint_WGS84_${lat.toFixed(4)}N_${lng.toFixed(4)}E_${ds}.tif`;
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},4000);
+    const kb=(buf.byteLength/1024).toFixed(1);
+    status.style.color='var(--a3)';
+    status.innerHTML=`✓ ${nx}×${nx}px · ${kb}KB · EPSG:4326<br><span style="color:var(--muted);font-size:10px">Tower: ${lat.toFixed(5)}°N ${lng.toFixed(5)}°E</span>`;
+  }catch(err){
+    status.style.color='var(--red)';status.textContent='✗ '+err.message;
+    console.error(err);
+  }finally{btn.disabled=false;}
+});
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+render();
+</script>
+</body>
+</html>
