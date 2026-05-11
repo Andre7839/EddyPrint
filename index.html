@@ -1108,7 +1108,7 @@ function renderCanvas(state){
         const cTL=vTL>=th?1:0,cTR=vTR>=th?1:0,cBL=vBL>=th?1:0,cBR=vBR>=th?1:0;
         const idx=(cTL<<3)|(cTR<<2)|(cBR<<1)|cBL;
         if(idx===0||idx===15) continue;
-        function lerp(va,vb){return Math.max(0,Math.min(1,(th-va)/(vb-va)||0));}
+        const lerp=(va,vb)=>Math.max(0,Math.min(1,(th-va)/((vb-va)||1e-10)));
         const tT=lerp(vTL,vTR),tB=lerp(vBL,vBR),tL=lerp(vTL,vBL),tR=lerp(vTR,vBR);
         const mT=[(ix+tT)*ccellPx,iy*ccellPx],mB=[(ix+tB)*ccellPx,(iy+1)*ccellPx];
         const mL=[ix*ccellPx,(iy+tL)*ccellPx],mR=[(ix+1)*ccellPx,(iy+tR)*ccellPx];
@@ -1163,8 +1163,8 @@ function renderCanvas(state){
     ctx.font='bold 11px Inter,sans-serif';ctx.textAlign='center';ctx.fillStyle='#6688aa';
     ctx.fillText(lbl,rx+dx2*(rr-3),ry+dy2*(rr-3)+4);
   });
-  // Wind arrow: rotate by windDir (CW from North = met convention)
-  ctx.save();ctx.translate(rx,ry);ctx.rotate(windDir*Math.PI/180);
+  // Wind arrow rotates to DOWNWIND direction (away from footprint)
+  ctx.save();ctx.translate(rx,ry);ctx.rotate((windDir+180)*Math.PI/180);
   ctx.strokeStyle='#0077cc';ctx.lineWidth=3;ctx.lineCap='round';
   ctx.beginPath();ctx.moveTo(0,16);ctx.lineTo(0,-15);ctx.stroke();
   ctx.beginPath();ctx.moveTo(0,-22);ctx.lineTo(-7,-12);ctx.lineTo(7,-12);ctx.closePath();
@@ -1343,10 +1343,8 @@ function updateCoordAudit(){
 //  WIND COMPASS — small arrow in map corner
 // ═══════════════════════════════════════════════════════
 function updateWindCompass(){
-  // windDir = direction wind comes FROM (met convention, CW from North)
-  // Arrow points FROM wind source direction toward tower
-  // Rotate the SVG group by windDir degrees (CW from North = standard SVG rotation)
-  document.getElementById('wind-arrow-g').setAttribute('transform',`rotate(${P.windDir})`);
+  // Arrow points DOWNWIND (away from footprint) — standard met convention
+  document.getElementById('wind-arrow-g').setAttribute('transform',`rotate(${(P.windDir+180)%360})`);
   document.getElementById('wind-dir-label').textContent=P.windDir+'°';
 }
 
