@@ -113,13 +113,62 @@ input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.25); }
 
 /* Toggle detail button on map */
 #btn-toggle-detail{
-  position:absolute; bottom:18px; right:18px; z-index:1050;
+  position:absolute; bottom:18px; right:18px; z-index:1051;
   background:var(--a1); border:none; border-radius:8px;
-  padding:9px 16px; font-size:12px; font-weight:700; color:#fff;
+  padding:8px 14px; font-size:11px; font-weight:700; color:#fff;
   cursor:pointer; box-shadow:0 2px 10px var(--shadow); transition:all .18s;
   display:none; font-family:'Inter',sans-serif; letter-spacing:.3px;
 }
-#btn-toggle-detail:hover{ background:var(--a1h); transform:translateY(-1px); }
+#btn-toggle-detail:hover{ background:var(--a1h); }
+
+/* ── FLOATING FOOTPRINT DETAIL PANEL (bottom-right quarter of map) ── */
+#fp-detail{
+  position:absolute; bottom:0; right:0; z-index:1050;
+  width:40%; height:44%;
+  background:rgba(255,255,255,.97);
+  border-top:1.5px solid var(--border); border-left:1.5px solid var(--border);
+  border-radius:10px 0 0 0;
+  box-shadow:-4px -4px 20px var(--shadow);
+  display:none; flex-direction:column; overflow:hidden;
+}
+#fp-detail-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:5px 10px; background:var(--a1); flex-shrink:0;
+}
+#fp-detail-title{
+  font-size:10px; font-weight:700; color:#fff; letter-spacing:1.5px; text-transform:uppercase;
+}
+#fp-detail-actions{ display:flex; gap:4px; align-items:center; }
+#fp-detail-expand{
+  background:rgba(255,255,255,.2); border:none; border-radius:4px;
+  color:#fff; font-size:10px; font-weight:600; padding:2px 7px;
+  cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap;
+}
+#fp-detail-expand:hover{ background:rgba(255,255,255,.35); }
+#fp-detail-close{
+  background:rgba(255,255,255,.2); border:none; border-radius:4px;
+  color:#fff; font-size:14px; line-height:1; padding:1px 6px;
+  cursor:pointer; font-family:'Inter',sans-serif;
+}
+#fp-detail-close:hover{ background:rgba(255,0,0,.4); }
+#fp-canvas-wrap{
+  flex:1; display:flex; align-items:center; justify-content:center;
+  padding:4px 4px 28px 4px; overflow:hidden; position:relative; min-height:0;
+}
+#fp-canvas{
+  border-radius:6px; display:block;
+  cursor:crosshair;
+  width:100%; height:100%;
+  object-fit:contain;
+}
+#fp-hover{
+  position:absolute; bottom:6px; left:6px; right:6px;
+  background:rgba(255,255,255,.92); border:1px solid var(--border);
+  border-radius:5px; padding:3px 8px; font-size:10px; color:var(--muted);
+  pointer-events:none;
+}
+#fp-hover b{ color:var(--a1); }
+#fp-hover .fv b{ color:var(--yellow); }
 
 /* ── RIGHT PANEL ── */
 .metric{ margin-bottom:14px; }
@@ -253,7 +302,22 @@ input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.25); }
   </div>
 
   <!-- Detail view opens in new tab -->
-  <button id="btn-toggle-detail">📊 Open Footprint Detail</button>
+  <button id="btn-toggle-detail">📊 Show Detail</button>
+
+  <!-- Floating footprint detail panel — bottom-right quarter -->
+  <div id="fp-detail">
+    <div id="fp-detail-header">
+      <span id="fp-detail-title">📊 Footprint Detail</span>
+      <div id="fp-detail-actions">
+        <button id="fp-detail-expand" title="Open full-screen detail tab">⤢ Full Tab</button>
+        <button id="fp-detail-close" title="Hide panel">×</button>
+      </div>
+    </div>
+    <div id="fp-canvas-wrap">
+      <canvas id="fp-canvas"></canvas>
+      <div id="fp-hover">Hover over footprint to inspect values</div>
+    </div>
+  </div>
 </div>
 
 <!-- RIGHT PANEL -->
@@ -1377,7 +1441,8 @@ function render(){
   }
   updateCoordAudit();
   updateWindCompass();
-  // Push live update to detail tab if open
+  drawInlineCanvas();
+  // Push live update to external detail tab if open
   if(detailTab && !detailTab.closed) pushToDetailTab();
 }
 
@@ -1407,8 +1472,175 @@ document.getElementById('chk-contours').addEventListener('change',()=>{
   if(!document.getElementById('chk-contours').checked){if(contourLayer){map.removeLayer(contourLayer);contourLayer=null;}}
   else updateContourOverlay();
 });
-// Detail tab button
-document.getElementById('btn-toggle-detail').addEventListener('click', openOrUpdateDetailTab);
+// Detail tab button — shows the floating panel
+document.getElementById('btn-toggle-detail').addEventListener('click',()=>{
+  document.getElementById('fp-detail').style.display='flex';
+  document.getElementById('btn-toggle-detail').style.display='none';
+  requestAnimationFrame(drawInlineCanvas);
+});
+
+// Floating panel close button
+document.getElementById('fp-detail-close').addEventListener('click',()=>{
+  document.getElementById('fp-detail').style.display='none';
+  document.getElementById('btn-toggle-detail').style.display='block';
+});
+
+// Expand button — opens the full external tab
+document.getElementById('fp-detail-expand').addEventListener('click', openOrUpdateDetailTab);
+
+// ═══════════════════════════════════════════════════════
+//  INLINE CANVAS — draws footprint inside the floating panel
+// ═══════════════════════════════════════════════════════
+function drawInlineCanvas(){
+  if(!lastResult) return;
+  const canvas=document.getElementById('fp-canvas');
+
+  // Use a fixed internal resolution regardless of layout state
+  // CSS max-width/max-height:100% will scale it to fit the panel
+  const W=400;
+  canvas.width=canvas.height=W;
+  canvas.style.width='100%';
+  canvas.style.height='100%';
+  canvas.style.objectFit='contain';
+
+  const{grid,nx,domain,dx}=lastResult;
+  const ctx=canvas.getContext('2d');
+  const cellPx=W/nx;
+  const maxF=Math.max(...grid);
+  const thr=getThresholds(grid,[0.5,0.7,0.9]);
+  const thr90=thr[0.9]||0;
+
+  // Background
+  ctx.fillStyle='#f0f4f8'; ctx.fillRect(0,0,W,W);
+
+  // Heatmap — north-up (Y-flip: srcRow = nx-1-iy), masked to 90%
+  const img=ctx.createImageData(W,W);
+  const cp=Math.ceil(cellPx);
+  for(let iy=0;iy<nx;iy++){
+    const srcRow=nx-1-iy;
+    for(let ix=0;ix<nx;ix++){
+      const v=grid[srcRow*nx+ix];
+      if(v<thr90) continue;
+      const[r,g,b,a]=toRGBA(v,maxF);
+      const px=Math.round(ix*cellPx), py=Math.round(iy*cellPx);
+      for(let pj=py;pj<Math.min(py+cp,W);pj++)
+        for(let pi=px;pi<Math.min(px+cp,W);pi++){
+          const k=(pj*W+pi)*4;
+          if(a>img.data[k+3]){img.data[k]=r;img.data[k+1]=g;img.data[k+2]=b;img.data[k+3]=a;}
+        }
+    }
+  }
+  ctx.putImageData(img,0,0);
+
+  // Contours — bilinear + Gaussian + marching-squares (north-up Y-flip)
+  const CSCALE=3;
+  const{grid:cgu,nx:cnx}=bilinearUpsample(grid,nx,CSCALE);
+  const cgrid=gaussianSmooth(cgu,cnx);
+  const ccellPx=W/cnx;
+  const clvls=[
+    {l:.5,col:'#cc2200',lw:1.5,dash:[]},
+    {l:.7,col:'#e07b00',lw:1.2,dash:[5,3]},
+    {l:.9,col:'#0077cc',lw:1.0,dash:[3,3]}
+  ];
+  clvls.forEach(({l,col,lw,dash})=>{
+    const th=thr[l]; if(!th) return;
+    const rawSegs=[];
+    for(let iy=0;iy<cnx-1;iy++){
+      const sY0=cnx-1-iy, sY1=cnx-2-iy; // north-up Y-flip
+      for(let ix=0;ix<cnx-1;ix++){
+        const vTL=cgrid[sY0*cnx+ix],vTR=cgrid[sY0*cnx+ix+1];
+        const vBL=cgrid[sY1*cnx+ix],vBR=cgrid[sY1*cnx+ix+1];
+        const cTL=vTL>=th?1:0,cTR=vTR>=th?1:0,cBL=vBL>=th?1:0,cBR=vBR>=th?1:0;
+        const idx=(cTL<<3)|(cTR<<2)|(cBR<<1)|cBL;
+        if(idx===0||idx===15) continue;
+        const lerp=(va,vb)=>Math.max(0,Math.min(1,(th-va)/((vb-va)||1e-10)));
+        const tT=lerp(vTL,vTR),tB=lerp(vBL,vBR),tL=lerp(vTL,vBL),tR=lerp(vTR,vBR);
+        const mT=[(ix+tT)*ccellPx,iy*ccellPx],mB=[(ix+tB)*ccellPx,(iy+1)*ccellPx];
+        const mL=[ix*ccellPx,(iy+tL)*ccellPx],mR=[(ix+1)*ccellPx,(iy+tR)*ccellPx];
+        const table={0:[],15:[],1:[[mL,mB]],14:[[mL,mB]],2:[[mB,mR]],13:[[mB,mR]],3:[[mL,mR]],12:[[mL,mR]],4:[[mT,mR]],11:[[mT,mR]],5:[[mL,mT],[mB,mR]],6:[[mT,mB]],9:[[mT,mB]],7:[[mL,mT]],8:[[mL,mT]],10:[[mL,mB],[mT,mR]]};
+        (table[idx]||[]).forEach(s=>rawSegs.push(s));
+      }
+    }
+    const pk=([x,y])=>x.toFixed(2)+','+y.toFixed(2);
+    const adj=new Map();
+    rawSegs.forEach((seg,i)=>{[pk(seg[0]),pk(seg[1])].forEach(k=>{if(!adj.has(k))adj.set(k,[]);adj.get(k).push(i);});});
+    const used=new Uint8Array(rawSegs.length);
+    ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.setLineDash(dash);
+    for(let s=0;s<rawSegs.length;s++){
+      if(used[s]) continue; used[s]=1;
+      const chain=[...rawSegs[s]];
+      let ext=true;
+      while(ext){ext=false;const t=chain[chain.length-1];for(const i of(adj.get(pk(t))||[])){if(used[i])continue;used[i]=1;const[a,b]=rawSegs[i];chain.push(pk(a)===pk(t)?b:a);ext=true;break;}}
+      ext=true;
+      while(ext){ext=false;const h=chain[0];for(const i of(adj.get(pk(h))||[])){if(used[i])continue;used[i]=1;const[a,b]=rawSegs[i];chain.unshift(pk(a)===pk(h)?b:a);ext=true;break;}}
+      if(chain.length<2) continue;
+      ctx.beginPath(); ctx.moveTo(chain[0][0],chain[0][1]);
+      for(let i=1;i<chain.length;i++) ctx.lineTo(chain[i][0],chain[i][1]);
+      if(pk(chain[0])===pk(chain[chain.length-1])) ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  });
+
+  // Tower marker
+  const cx=W/2, cy=W/2;
+  ctx.beginPath(); ctx.moveTo(cx,cy-11); ctx.lineTo(cx-6,cy+4); ctx.lineTo(cx+6,cy+4); ctx.closePath();
+  ctx.fillStyle='#cc2200'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=1.2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy+4,3.5,0,Math.PI*2);
+  ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#cc2200'; ctx.lineWidth=1; ctx.stroke();
+
+  // Compass rose (top-left, small)
+  const rx=18, ry=18, rr=13;
+  ctx.save();
+  ctx.fillStyle='rgba(255,255,255,.88)';
+  ctx.beginPath(); ctx.arc(rx,ry,rr+3,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#d0dce8'; ctx.lineWidth=0.8; ctx.stroke();
+  [['N',0,-1],['S',0,1],['E',1,0],['W',-1,0]].forEach(([lbl,dx2,dy2])=>{
+    ctx.font='bold 7px Inter,sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#6688aa';
+    ctx.fillText(lbl, rx+dx2*(rr-2), ry+dy2*(rr-2)+2.5);
+  });
+  ctx.save(); ctx.translate(rx,ry); ctx.rotate((P.windDir+180)*Math.PI/180);
+  ctx.strokeStyle='#0077cc'; ctx.lineWidth=1.8; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(0,8); ctx.lineTo(0,-7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-11); ctx.lineTo(-4,-5); ctx.lineTo(4,-5); ctx.closePath();
+  ctx.fillStyle='#0077cc'; ctx.fill();
+  ctx.restore(); ctx.restore();
+
+  // N↑ label
+  ctx.font='bold 9px Inter,sans-serif'; ctx.textAlign='right'; ctx.fillStyle='rgba(60,90,130,.6)';
+  ctx.fillText('N↑', W-4, 12);
+
+  // Scale bar
+  const scM=Math.round(domain/4), scPx=(scM/(domain*2))*W;
+  ctx.fillStyle='rgba(20,50,100,.6)';
+  ctx.fillRect(4, W-12, scPx, 2);
+  ctx.font='8px Inter,sans-serif'; ctx.textAlign='left'; ctx.fillStyle='rgba(20,50,100,.6)';
+  ctx.fillText(scM+'m', 4, W-15);
+}
+
+// ── Hover inspection on inline canvas ──────────────────
+document.getElementById('fp-canvas').addEventListener('mousemove',e=>{
+  if(!lastResult) return;
+  const canvas=document.getElementById('fp-canvas');
+  const rect=canvas.getBoundingClientRect();
+  const{grid,nx,domain,dx}=lastResult;
+  const scX=canvas.width/rect.width, scY=canvas.height/rect.height;
+  const ix=Math.floor((e.clientX-rect.left)*scX/(canvas.width/nx));
+  const iy=Math.floor((e.clientY-rect.top)*scY/(canvas.height/nx));
+  if(ix<0||ix>=nx||iy<0||iy>=nx) return;
+  const srcRow=nx-1-iy; // Y-flip for north-up
+  const v=grid[srcRow*nx+ix];
+  const xM=(dx*(ix+.5)-domain).toFixed(0);
+  const yM=(dx*(srcRow+.5)-domain).toFixed(0);
+  const fv=(v*1e6).toFixed(3);
+  const thr=getThresholds(grid,[0.5,0.7,0.9]);
+  const zone=v<(thr[0.9]||0)?'Outside':v<(thr[0.7]||0)?'90% zone':v<(thr[0.5]||0)?'70% zone':'50% zone';
+  document.getElementById('fp-hover').innerHTML=
+    `x:<b>${xM}m</b> y:<b>${yM}m</b> f:<span class="fv"><b>${fv}×10⁻⁶</b></span> <span style="color:var(--a1)">${zone}</span>`;
+});
+document.getElementById('fp-canvas').addEventListener('mouseleave',()=>{
+  document.getElementById('fp-hover').textContent='Hover over footprint to inspect values';
+});
 
 // ═══════════════════════════════════════════════════════
 //  AUTO ZOOM to footprint after tower placed
@@ -1428,10 +1660,9 @@ map.on('click',()=>{
     firstPlace=false;
     setTimeout(()=>{
       zoomToFootprint();
-      document.getElementById('btn-toggle-detail').style.display='block';
-      // Open detail tab behind (focus returns to parent immediately)
-      openOrUpdateDetailTab();
-      window.focus();
+      document.getElementById('fp-detail').style.display='flex';
+      document.getElementById('btn-toggle-detail').style.display='none';
+      requestAnimationFrame(drawInlineCanvas);
     },150);
   }
 });
