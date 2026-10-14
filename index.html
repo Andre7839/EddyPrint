@@ -59,20 +59,6 @@ input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.25); }
 .tog input{ accent-color:var(--a1); width:14px; height:14px; }
 .tog:hover{ color:var(--a1); }
 
-/* ── Basemap toggle ── */
-#basemap-btns{ display:flex; gap:6px; margin-top:2px; }
-.bm-btn{
-  flex:1; padding:7px 4px; font-size:12px; font-weight:600;
-  font-family:'Inter',sans-serif; cursor:pointer;
-  border:1.5px solid var(--border2); border-radius:7px;
-  background:var(--panel2); color:var(--text2);
-  transition:all .18s; white-space:nowrap;
-}
-.bm-btn:hover{ border-color:var(--a1); color:var(--a1); background:var(--a1l); }
-.bm-btn.active{
-  background:var(--a1); color:#fff; border-color:var(--a1);
-  box-shadow:0 2px 8px rgba(0,100,200,.25);
-}
 
 /* ── MAP CONTAINER ── */
 #map-wrap{ position:relative; min-height:0; overflow:hidden; }
@@ -124,7 +110,7 @@ input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.25); }
 /* ── FLOATING FOOTPRINT DETAIL PANEL (bottom-right quarter of map) ── */
 #fp-detail{
   position:absolute; bottom:0; right:0; z-index:1050;
-  width:40%; height:44%;
+  width:36%; height:40%;
   background:rgba(255,255,255,.97);
   border-top:1.5px solid var(--border); border-left:1.5px solid var(--border);
   border-radius:10px 0 0 0;
@@ -187,8 +173,6 @@ input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.25); }
 .coord-item .cv{ font-size:12px; font-weight:700; color:var(--text); margin-top:2px; font-variant-numeric:tabular-nums; }
 .infobox{ margin-top:12px; padding:10px 11px; background:var(--panel2); border:1px solid var(--border); border-radius:6px; font-size:11px; color:var(--text2); line-height:2; }
 .infobox b{ color:var(--a1); font-weight:700; }
-#coord-verify{ background:var(--a1l); border-color:#b0d0e8; display:none; }
-
 #export-btn{ width:100%; padding:11px; background:linear-gradient(135deg,var(--a1),#0099cc); border:none; border-radius:8px; color:#fff; font-family:'Inter',sans-serif; font-size:13px; font-weight:700; letter-spacing:.5px; cursor:pointer; transition:all .2s; margin-top:14px; box-shadow:0 2px 8px rgba(0,100,200,.2); }
 #export-btn:hover{ background:linear-gradient(135deg,var(--a1h),#007faa); box-shadow:0 4px 14px rgba(0,100,200,.3); transform:translateY(-1px); }
 #export-btn:active{ transform:scale(.98); }
@@ -198,6 +182,114 @@ input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.25); }
 ::-webkit-scrollbar{ width:4px; }
 ::-webkit-scrollbar-track{ background:var(--bg); }
 ::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:2px; }
+
+/* ── LEARN BUTTON ── */
+#learn-btn{
+  margin-left:18px; padding:7px 16px;
+  background:linear-gradient(135deg,#1a8a3c,#22aa50);
+  border:none; border-radius:8px; color:#fff;
+  font-family:'Inter',sans-serif; font-size:12px; font-weight:700;
+  cursor:pointer; letter-spacing:.4px; white-space:nowrap;
+  box-shadow:0 2px 8px rgba(20,120,50,.25); transition:all .18s;
+  flex-shrink:0;
+}
+#learn-btn:hover{ background:linear-gradient(135deg,#157832,#1a9040); transform:translateY(-1px); box-shadow:0 4px 12px rgba(20,120,50,.3); }
+
+/* ── QUIZ MODAL ── */
+#quiz-modal{ position:fixed; inset:0; z-index:9000; display:flex; align-items:center; justify-content:center; }
+#quiz-backdrop{ position:absolute; inset:0; background:rgba(10,25,50,.55); backdrop-filter:blur(3px); }
+#quiz-box{
+  position:relative; width:min(660px,96vw); max-height:92vh;
+  background:#fff; border-radius:16px; overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,30,80,.3);
+  display:flex; flex-direction:column;
+}
+#quiz-header{
+  padding:22px 24px 16px; background:linear-gradient(135deg,#0055aa,#0099cc);
+  position:relative; flex-shrink:0;
+}
+#quiz-title{ font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:#fff; }
+#quiz-subtitle{ font-size:11px; color:rgba(255,255,255,.75); margin-top:4px; letter-spacing:.5px; }
+#quiz-close{
+  position:absolute; top:14px; right:16px;
+  background:rgba(255,255,255,.2); border:none; border-radius:6px;
+  color:#fff; font-size:18px; line-height:1; padding:2px 8px;
+  cursor:pointer; transition:background .15s;
+}
+#quiz-close:hover{ background:rgba(220,50,50,.6); }
+#quiz-progress-wrap{
+  padding:10px 24px 6px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:12px; flex-shrink:0;
+  background:var(--panel2);
+}
+#quiz-progress-bar{ flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+#quiz-progress-fill{ height:100%; background:linear-gradient(90deg,#0077cc,#00aadd); border-radius:3px; transition:width .4s ease; }
+#quiz-progress-label{ font-size:11px; font-weight:700; color:var(--muted); white-space:nowrap; }
+#quiz-body{ padding:24px 24px 8px; overflow-y:auto; flex:1; }
+#quiz-question{ font-size:15px; font-weight:600; color:var(--text); line-height:1.55; margin-bottom:20px; }
+#quiz-options{ display:flex; flex-direction:column; gap:10px; }
+.quiz-opt{
+  padding:11px 16px; border:1.5px solid var(--border2); border-radius:10px;
+  cursor:pointer; font-size:13px; color:var(--text2); font-weight:500;
+  transition:all .15s; background:#fff; text-align:left; font-family:'Inter',sans-serif;
+  line-height:1.4;
+}
+.quiz-opt:hover:not(:disabled){ border-color:var(--a1); background:var(--a1l); color:var(--a1); }
+.quiz-opt.correct{ border-color:#1a8a3c; background:#e8f8ee; color:#145c2a; }
+.quiz-opt.wrong{ border-color:#cc2200; background:#fef0ee; color:#991a00; }
+.quiz-opt.reveal{ border-color:#1a8a3c; background:#e8f8ee; color:#145c2a; opacity:.7; }
+.quiz-opt:disabled{ cursor:default; }
+#quiz-feedback{
+  margin-top:16px; padding:12px 16px; border-radius:10px;
+  font-size:13px; font-weight:600; line-height:1.5;
+}
+#quiz-feedback.ok{ background:#e8f8ee; color:#145c2a; border:1.5px solid #1a8a3c; }
+#quiz-feedback.bad{ background:#fef0ee; color:#991a00; border:1.5px solid #cc2200; }
+#quiz-explanation{
+  margin-top:10px; padding:12px 16px; background:var(--a1l);
+  border:1px solid #cce0f0; border-radius:10px;
+  font-size:12px; color:var(--text2); line-height:1.65;
+}
+#quiz-explanation b{ color:var(--a1); }
+#quiz-footer{
+  padding:12px 24px 18px; border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0; background:var(--panel2);
+}
+#quiz-score-wrap{ font-size:13px; color:var(--text2); }
+#quiz-score-val{ font-weight:700; color:var(--a1); font-size:15px; margin-left:6px; }
+#quiz-next-btn, #quiz-restart-btn{
+  padding:9px 22px; background:var(--a1); border:none; border-radius:8px;
+  color:#fff; font-family:'Inter',sans-serif; font-size:13px; font-weight:700;
+  cursor:pointer; transition:background .15s; letter-spacing:.3px;
+}
+#quiz-next-btn:hover, #quiz-restart-btn:hover{ background:var(--a1h); }
+/* Results screen */
+#quiz-results{
+  position:absolute; inset:0; background:#fff;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:32px 28px; text-align:center; gap:10px;
+}
+#quiz-results-icon{ font-size:52px; line-height:1; }
+#quiz-results-title{ font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--text); }
+#quiz-results-score{ font-size:36px; font-weight:700; color:var(--a1); }
+#quiz-results-msg{ font-size:13px; color:var(--text2); line-height:1.6; max-width:420px; }
+#quiz-results-breakdown{
+  display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
+  margin-top:4px;
+}
+.rb-chip{
+  padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700;
+}
+.rb-correct{ background:#e8f8ee; color:#145c2a; }
+.rb-wrong{ background:#fef0ee; color:#991a00; }
+#quiz-results-restart{
+  margin-top:8px; padding:10px 28px; background:var(--a1);
+  border:none; border-radius:8px; color:#fff;
+  font-family:'Inter',sans-serif; font-size:14px; font-weight:700;
+  cursor:pointer; transition:background .15s;
+}
+#quiz-results-restart:hover{ background:var(--a1h); }
 </style>
 </head>
 <body>
@@ -214,7 +306,47 @@ input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.25); }
     <div class="chip"><div class="lbl">Peak ↗</div><div class="val y" id="hc-peak">—</div></div>
     <div class="chip"><div class="lbl">Location</div><div class="val b" id="hc-loc" style="font-size:11px">Click map</div></div>
   </div>
+  <button id="learn-btn" onclick="openQuiz()">🎓 Learn</button>
 </header>
+
+<!-- ═══════════════ QUIZ MODAL ═══════════════ -->
+<div id="quiz-modal" style="display:none">
+  <div id="quiz-backdrop" onclick="closeQuiz()"></div>
+  <div id="quiz-box">
+    <div id="quiz-header">
+      <div id="quiz-title">🎓 EddyPrint — Learning Quiz</div>
+      <div id="quiz-subtitle">Test your understanding of eddy covariance footprint estimation</div>
+      <button id="quiz-close" onclick="closeQuiz()">×</button>
+    </div>
+    <div id="quiz-progress-wrap">
+      <div id="quiz-progress-bar"><div id="quiz-progress-fill"></div></div>
+      <div id="quiz-progress-label"></div>
+    </div>
+    <div id="quiz-body">
+      <div id="quiz-question"></div>
+      <div id="quiz-options"></div>
+      <div id="quiz-feedback" style="display:none"></div>
+      <div id="quiz-explanation" style="display:none"></div>
+    </div>
+    <div id="quiz-footer">
+      <div id="quiz-score-wrap" style="display:none">
+        <span id="quiz-score-label">Score:</span>
+        <span id="quiz-score-val"></span>
+      </div>
+      <button id="quiz-next-btn" onclick="quizNext()" style="display:none">Next →</button>
+      <button id="quiz-restart-btn" onclick="quizRestart()" style="display:none">↺ Restart</button>
+    </div>
+    <!-- Results screen -->
+    <div id="quiz-results" style="display:none">
+      <div id="quiz-results-icon"></div>
+      <div id="quiz-results-title"></div>
+      <div id="quiz-results-score"></div>
+      <div id="quiz-results-msg"></div>
+      <div id="quiz-results-breakdown"></div>
+      <button id="quiz-results-restart" onclick="quizRestart()">↺ Try Again</button>
+    </div>
+  </div>
+</div>
 
 <div id="body">
 
@@ -253,16 +385,7 @@ input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.25); }
   </div>
 
   <div class="sec">Domain</div>
-  <div class="param">
-    <div class="prow"><span class="pname">Grid Resolution</span><span class="pval"><span id="v-nx">120</span>×<span id="v-nx2">120</span></span></div>
-    <input type="range" id="s-nx" min="60" max="200" step="20" value="120"/>
-  </div>
 
-  <div class="sec">Basemap</div>
-  <div id="basemap-btns">
-    <button class="bm-btn active" data-bm="light" title="Light gray canvas">🗺 Light</button>
-    <button class="bm-btn" data-bm="satellite" title="Esri satellite imagery">🛰 Satellite</button>
-  </div>
 
   <div class="sec">Display</div>
   <label class="tog"><input type="checkbox" id="chk-overlay" checked/>Heatmap overlay</label>
@@ -367,20 +490,6 @@ input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.25); }
 
   <button id="export-btn" disabled>⬇ Export GeoTIFF (WGS 84)</button>
   <div id="export-status"></div>
-
-  <div class="infobox" id="coord-verify">
-    <b>📌 Coordinate Audit</b><br/>
-    <span style="color:var(--muted)">Tower WGS 84</span><br/>
-    <span id="cv-latlon" style="font-weight:600">—</span><br/>
-    <span style="color:var(--muted)">Tiepoint NW corner</span><br/>
-    <span id="cv-tp" style="color:var(--a1);font-weight:600">—</span><br/>
-    <span style="color:var(--muted)">BBox lon W–E</span><br/>
-    <span id="cv-bbox-lon">—</span><br/>
-    <span style="color:var(--muted)">BBox lat S–N</span><br/>
-    <span id="cv-bbox-lat">—</span><br/>
-    <span style="color:var(--muted)">Pixel size</span><br/>
-    <span id="cv-dx" style="color:var(--yellow);font-weight:600">—</span>
-  </div>
 
   <div class="infobox">
     <b>Model</b> Hsieh et al. (2000)<br/>
@@ -531,7 +640,7 @@ function writeTIFF_WGS84(floatData,width,height,lonTp,latTp,dLon,dLat){
 // ═══════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════
-const P={zm:3.5,z0:0.1,ustar:0.4,sigmav:0.5,L:-50,windDir:225,nx:200};
+const P={zm:3.5,z0:0.1,ustar:0.4,sigmav:0.5,L:-50,windDir:225,nx:160};
 let towerLL=null, lastResult=null;
 let heatLayer=null, contourLayer=null;
 
@@ -540,36 +649,12 @@ let heatLayer=null, contourLayer=null;
 // ═══════════════════════════════════════════════════════
 const map=L.map('leaflet-map',{zoomControl:true,minZoom:1}).setView([38.5449,-121.7405],13);
 
-// Tile layer definitions
-const BASEMAPS={
-  light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
-    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
-    subdomains:'abcd', maxZoom:22, keepBuffer:4
-  }),
-  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
-    attribution:'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA',
-    maxZoom:22, keepBuffer:4, crossOrigin:true,
-    errorTileUrl:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-  })
-};
-let activeBasemap='light';
-BASEMAPS.light.addTo(map);
-
-// Basemap switcher
-document.querySelectorAll('.bm-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const bm=btn.dataset.bm;
-    if(bm===activeBasemap) return;
-    map.removeLayer(BASEMAPS[activeBasemap]);
-    BASEMAPS[bm].addTo(map);
-    // Make sure overlays stay on top
-    if(heatLayer) heatLayer.bringToFront();
-    if(contourLayer) contourLayer.bringToFront();
-    if(towerMarker) towerMarker.bringToFront();
-    activeBasemap=bm;
-    document.querySelectorAll('.bm-btn').forEach(b=>b.classList.toggle('active',b.dataset.bm===bm));
-  });
-});
+// Satellite basemap only
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+  attribution:'Tiles &copy; Esri &mdash; Source: Esri, USGS, NOAA',
+  maxZoom:22, keepBuffer:4, crossOrigin:true,
+  errorTileUrl:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+}).addTo(map);
 
 const towerIcon=L.divIcon({
   html:`<div style="width:24px;height:24px;background:radial-gradient(circle,#ff4444,#cc0000);border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(180,0,0,.5);transform:translate(-50%,-50%)"></div>`,
@@ -1385,25 +1470,6 @@ function pushToDetailTab(){
 }
 
 // ═══════════════════════════════════════════════════════
-//  COORD AUDIT
-// ═══════════════════════════════════════════════════════
-function updateCoordAudit(){
-  if(!towerLL||!lastResult) return;
-  const{nx,dx,domain}=lastResult;
-  const{lat,lng}=towerLL;
-  const dLat=mToDeg(dx,lat,'lat'), dLon=mToDeg(dx,lat,'lon');
-  const lonTp=lng-(nx/2)*dLon, latTp=lat+(nx/2)*dLat;
-  const bboxW=lonTp-.5*dLon, bboxE=lonTp+nx*dLon-.5*dLon;
-  const bboxN=latTp+.5*dLat, bboxS=latTp-nx*dLat+.5*dLat;
-  document.getElementById('coord-verify').style.display='block';
-  document.getElementById('cv-latlon').textContent=`${lat.toFixed(6)}°N  ${lng.toFixed(6)}°E`;
-  document.getElementById('cv-tp').textContent=`${lonTp.toFixed(6)}°E  ${latTp.toFixed(6)}°N`;
-  document.getElementById('cv-bbox-lon').textContent=`W ${bboxW.toFixed(5)}° – E ${bboxE.toFixed(5)}°`;
-  document.getElementById('cv-bbox-lat').textContent=`S ${bboxS.toFixed(5)}° – N ${bboxN.toFixed(5)}°`;
-  document.getElementById('cv-dx').textContent=`dLon ${dLon.toExponential(3)}° · dLat ${dLat.toExponential(3)}°`;
-}
-
-// ═══════════════════════════════════════════════════════
 //  WIND COMPASS — small arrow in map corner
 // ═══════════════════════════════════════════════════════
 function updateWindCompass(){
@@ -1439,7 +1505,6 @@ function render(){
     document.getElementById(fvi).textContent=(a/10000).toFixed(2)+' ha';
     document.getElementById(fai).textContent=`${cnt} cells · ${a.toFixed(0)} m²`;
   }
-  updateCoordAudit();
   updateWindCompass();
   drawInlineCanvas();
   // Push live update to external detail tab if open
@@ -1453,13 +1518,11 @@ function scheduleRender(){if(raf) cancelAnimationFrame(raf); raf=requestAnimatio
 //  SLIDER WIRING
 // ═══════════════════════════════════════════════════════
 [['zm',v=>(+v).toFixed(1)],['z0',v=>(+v).toFixed(3)],['ustar',v=>(+v).toFixed(2)],
- ['sigmav',v=>(+v).toFixed(2)],['L',v=>String(+v)],['windDir',v=>String(+v)],
- ['nx',v=>String(+v)]
+ ['sigmav',v=>(+v).toFixed(2)],['L',v=>String(+v)],['windDir',v=>String(+v)]
 ].forEach(([k,fmt])=>{
   document.getElementById('s-'+k).addEventListener('input',e=>{
     P[k]=parseFloat(e.target.value);
     document.getElementById('v-'+k).textContent=fmt(e.target.value);
-    if(k==='nx') document.getElementById('v-nx2').textContent=e.target.value;
     scheduleRender();
   });
 });
@@ -1698,6 +1761,366 @@ document.getElementById('export-btn').addEventListener('click',function(){
     status.style.color='var(--red)';status.textContent='✗ '+err.message;
     console.error(err);
   }finally{btn.disabled=false;}
+});
+
+// ═══════════════════════════════════════════════════════
+//  LEARN / QUIZ
+// ═══════════════════════════════════════════════════════
+// Each question: correct answer is always index 0 in 'opts'; shuffling happens at render time.
+const QUIZ_QUESTIONS_RAW=[
+  // ── FOOTPRINT THEORY ──────────────────────────────────
+  {
+    q:"What does the eddy covariance 'flux footprint' represent?",
+    opts:[
+      "The upwind source area whose surface exchange contributes to the flux measured at the tower",
+      "The altitude range sampled by the sonic anemometer",
+      "The horizontal distance to the nearest neighbouring tower",
+      "The area covered by the instrument's optical beam"
+    ],
+    explain:"The flux footprint is the upwind source area whose surface–atmosphere exchange influences the flux measured at the tower. It is NOT a fixed circle — its size and shape depend on wind direction, stability, and measurement height."
+  },
+  {
+    q:"If wind comes FROM the north (windDir = 0°), in which direction does the footprint extend?",
+    opts:[
+      "Northward — the footprint lies in the direction the wind is blowing FROM",
+      "Southward — the footprint lies downwind of the tower",
+      "Eastward — always perpendicular to wind direction",
+      "In all directions equally"
+    ],
+    explain:"Standard meteorological convention: windDir is the direction FROM which the wind blows. Turbulent scalars originate upwind of the tower, so the footprint extends INTO the wind direction. Here, wind from the north → footprint to the north."
+  },
+  {
+    q:"Increasing measurement height (z_m) with all else fixed will:",
+    opts:[
+      "Move the peak footprint further from the tower and spread it over a larger area",
+      "Concentrate the footprint closer to the tower",
+      "Have no effect on footprint size",
+      "Only change the crosswind width, not the peak distance"
+    ],
+    explain:"Higher measurement height means the sensor is further from the surface. Eddies contributing to the flux at z_m originate at greater horizontal distances, so the footprint peak moves further upwind and the total source area enlarges."
+  },
+  {
+    q:"Under stable atmospheric conditions (L > 0, e.g. calm nights), the footprint:",
+    opts:[
+      "Extends much further upwind with a narrow crosswind spread",
+      "Is very compact and centred near the tower",
+      "Is identical to neutral conditions",
+      "Expands mainly in the crosswind direction"
+    ],
+    explain:"Stable stratification suppresses vertical mixing, forcing the turbulent transport to remain near the surface over greater distances. The result is an elongated footprint extending many times further upwind compared to unstable or neutral conditions."
+  },
+  {
+    q:"The Obukhov length (L) in EddyPrint describes:",
+    opts:[
+      "Atmospheric stability — the height at which buoyancy equals mechanical turbulence production",
+      "The maximum wind fetch over flat terrain",
+      "The roughness sublayer depth",
+      "The height at which wind speed is measured"
+    ],
+    explain:"The Obukhov length L is a key stability parameter. |L| → ∞ means neutral; L < 0 means unstable (daytime convection shortens the footprint); L > 0 means stable (suppressed mixing, elongated footprint). Rule of thumb: |L| < 50 m is strongly non-neutral."
+  },
+  {
+    q:"Friction velocity (u★) mainly controls the footprint by:",
+    opts:[
+      "Setting turbulent mixing strength — higher u★ concentrates the footprint closer to the tower",
+      "Shifting the footprint perpendicular to the wind",
+      "Determining the crosswind Gaussian width only",
+      "Changing the measurement height automatically"
+    ],
+    explain:"u★ quantifies momentum flux (mechanical turbulence intensity). Strong mechanical mixing (large u★) brings scalar transport from relatively short distances. Low u★ (calm, stable nights) means weak mixing and a far-reaching footprint."
+  },
+  {
+    q:"The crosswind spread σ_v in the Hsieh model determines:",
+    opts:[
+      "The lateral (crosswind) Gaussian width of the footprint",
+      "The along-wind peak distance from the tower",
+      "The vertical extent of the flux-sampling layer",
+      "The flux measurement uncertainty"
+    ],
+    explain:"The footprint is separable: along-wind shape comes from the 1-D Hsieh et al. (2000) model; crosswind shape is a Gaussian with standard deviation σ_v. Larger σ_v broadens the footprint sideways, incorporating more of the landscape to the left and right of the wind direction."
+  },
+  {
+    q:"The 80% flux footprint contour shown on the map means:",
+    opts:[
+      "80% of the measured flux originates from within that contour",
+      "The flux measurement is 80% accurate inside that area",
+      "Wind blows from 80% of directions within that contour",
+      "80% of the footprint area is land rather than water"
+    ],
+    explain:"Cumulative footprint contours are iso-lines of the integrated footprint function. The 80% contour encloses all grid cells that together contribute 80% of the measured flux signal — the most commonly reported representativeness metric."
+  },
+  {
+    q:"Which roughness length (z₀) is most appropriate for a dense forest canopy ~20 m tall?",
+    opts:[
+      "z₀ ≈ 1–3 m (≈ 1/10 of canopy height)",
+      "z₀ ≈ 0.001 m (smooth desert pavement)",
+      "z₀ ≈ 0.03 m (short grass)",
+      "z₀ ≈ 10 m (equal to canopy height)"
+    ],
+    explain:"A commonly used approximation is z₀ ≈ 0.1 × canopy height. For a 20 m forest that gives z₀ ≈ 2 m. Larger z₀ increases surface drag and reduces the footprint peak distance. Smooth surfaces (z₀ ≈ 0.001 m) produce very elongated footprints."
+  },
+  // ── EC MEASUREMENT PRINCIPLE ──────────────────────────
+  {
+    q:"The fundamental measurement principle of eddy covariance is:",
+    opts:[
+      "Covariance between vertical wind speed (w′) and scalar fluctuations (c′), averaged over ~30 min",
+      "The ratio of net radiation to soil heat flux",
+      "Mean horizontal wind speed multiplied by mean scalar concentration",
+      "The gradient of scalar concentration between two heights"
+    ],
+    explain:"EC computes the turbulent flux as F = ρ·w′c′̄, the time-averaged covariance of vertical wind fluctuations (w′) with scalar fluctuations (c′, e.g. H₂O, CO₂, temperature). This directly captures the turbulent transport without assuming a gradient-diffusion relationship."
+  },
+  {
+    q:"Which sensor measures the three-dimensional wind components needed for eddy covariance?",
+    opts:[
+      "3-D sonic anemometer (ultrasonic anemometer)",
+      "Cup anemometer with wind vane",
+      "Pitot tube",
+      "Hot-wire anemometer"
+    ],
+    explain:"A 3-D sonic anemometer measures u, v, and w wind components at 10–20 Hz using the travel time of ultrasonic pulses along orthogonal paths. Cup anemometers cannot measure the critical vertical (w) component, and hot-wire anemometers are too fragile for long-term field deployment."
+  },
+  {
+    q:"Why must EC data be processed with 'coordinate rotation' (e.g. double rotation or planar fit)?",
+    opts:[
+      "To align the anemometer's coordinate system with the mean wind so that mean w = 0",
+      "To convert sonic temperature to air temperature",
+      "To remove rain spikes from the time series",
+      "To account for sensor separation between anemometer and gas analyser"
+    ],
+    explain:"Even a small tilt of the sonic anemometer introduces a spurious mean vertical wind (w̄ ≠ 0) that contaminates the flux. Coordinate rotation tilts the measured wind vector so that the time-averaged vertical wind is zero, removing this systematic bias."
+  },
+  {
+    q:"The 'Webb–Pearman–Leuning (WPL) correction' applied to EC water vapour fluxes accounts for:",
+    opts:[
+      "Density fluctuations caused by simultaneous heat and water vapour fluxes",
+      "Sensor frequency response attenuation at high frequencies",
+      "Precipitation contamination of the open-path gas analyser",
+      "Footprint area variation with wind direction"
+    ],
+    explain:"When heat and water vapour are exchanged, air density fluctuates. Open-path gas analysers measure molar mixing ratios affected by these density changes. The WPL correction (Webb et al. 1980) adds terms proportional to the sensible heat and latent heat fluxes to recover the true mass flux."
+  },
+  {
+    q:"Typical EC data averaging (flux averaging) periods are:",
+    opts:[
+      "30 minutes (or 60 min in some protocols)",
+      "1 second — each measurement is a flux",
+      "24 hours to capture the full diurnal cycle",
+      "1 week to smooth synoptic variability"
+    ],
+    explain:"30-min (or 1-hr) blocks are long enough to capture the full spectrum of flux-carrying eddies yet short enough that the ecosystem can be assumed stationary. Shorter periods miss low-frequency contributions; longer periods violate stationarity."
+  },
+  {
+    q:"During data gap-filling for EC time series, marginal distribution sampling (MDS) fills gaps using:",
+    opts:[
+      "Meteorologically similar half-hours from a short window around the gap",
+      "The annual mean flux for that ecosystem type",
+      "A simple linear interpolation between adjacent valid values",
+      "A neural network trained on remote-sensing data"
+    ],
+    explain:"MDS (Reichstein et al. 2005) searches for records within ±7 days (expanding if needed) that have similar radiation, temperature, and vapour pressure deficit. It is the standard method used in the FLUXNET data product and preserves realistic diurnal and seasonal patterns."
+  },
+  // ── EVAPOTRANSPIRATION ────────────────────────────────
+  {
+    q:"In the energy balance, latent heat flux (λE) measured by EC directly corresponds to:",
+    opts:[
+      "Evapotranspiration (ET) — the combined evaporation from soil and transpiration from plants",
+      "Sensible heat flux — the convective transfer of heat to the atmosphere",
+      "Net radiation minus soil heat flux",
+      "Carbon dioxide assimilation by photosynthesis"
+    ],
+    explain:"λE (W m⁻²) is the energy consumed by vaporising water. Dividing by the latent heat of vaporisation (λ ≈ 2.45 MJ kg⁻¹) converts it directly to an ET rate (mm h⁻¹ or mm d⁻¹). EC is considered the reference method for measuring actual ET over field and ecosystem scales."
+  },
+  {
+    q:"The Bowen ratio (β) is defined as:",
+    opts:[
+      "Sensible heat flux (H) divided by latent heat flux (λE)",
+      "Net radiation divided by soil heat flux",
+      "Latent heat flux divided by net radiation",
+      "Vapour pressure deficit divided by air temperature"
+    ],
+    explain:"β = H / λE. A low Bowen ratio (β < 0.5) indicates energy is predominantly used for evapotranspiration — typical of well-watered crops or forests. A high β (> 2) means most energy goes into heating the air — typical of dry or water-stressed ecosystems."
+  },
+  {
+    q:"The energy balance closure problem in EC refers to:",
+    opts:[
+      "Rn − G is typically larger than H + λE by 10–30%, with the reason still debated",
+      "The net radiation sensor and sonic anemometer reading different frequencies",
+      "WPL corrections overcorrecting λE in humid conditions",
+      "Soil heat flux plates being placed too deep"
+    ],
+    explain:"At most EC sites, the sum of measured H + λE is 10–30% less than available energy (Rn − G). Likely causes include neglected energy storage in biomass, unresolved large eddies (low-frequency flux loss), and spatial heterogeneity not captured by point measurements."
+  },
+  {
+    q:"Which condition is most likely to cause the EC-measured ET to be lower than actual ET?",
+    opts:[
+      "Stable night-time conditions with intermittent turbulence (flux loss due to calm periods)",
+      "Midday unstable conditions with high u★",
+      "Rainfall events that wet the canopy",
+      "Strong winds during daytime"
+    ],
+    explain:"During stable, calm periods (typically night), large coherent structures dominate transport and the EC assumption of stationary, homogeneous turbulence breaks down. Fluxes are often underestimated or missed entirely, leading to systematic under-measurement of nocturnal ET and respiration."
+  },
+  {
+    q:"Reference evapotranspiration (ET₀) estimated by the FAO-56 Penman–Monteith equation represents:",
+    opts:[
+      "ET from a hypothetical well-watered reference grass (0.12 m tall, fixed surface resistance)",
+      "Actual ET measured directly by a lysimeter",
+      "ET from an open water surface such as a lake or pan",
+      "Potential ET under unlimited water supply from any surface"
+    ],
+    explain:"FAO-56 ET₀ standardises ET reference to a clipped, actively growing grass with fixed aerodynamic (ra) and surface (rs = 70 s m⁻¹) resistances. Multiplying ET₀ by a crop coefficient (Kc) gives actual crop ET. EC-measured actual ET is compared against Kc·ET₀ to estimate crop water stress."
+  },
+  {
+    q:"The decoupling coefficient (Ω) of Jarvis & McNaughton describes:",
+    opts:[
+      "How strongly canopy transpiration is controlled by stomata vs. by atmospheric demand",
+      "The ratio of aerodynamic resistance to surface resistance",
+      "Wind speed above the canopy relative to wind at the ground",
+      "The fraction of net radiation used for transpiration"
+    ],
+    explain:"Ω ranges from 0 (fully coupled — stomatal control dominates, transpiration tracks gs closely) to 1 (fully decoupled — transpiration driven by available energy regardless of stomata). Aerodynamically rough, tall canopies (forests) tend to be well-coupled (Ω ≈ 0.1–0.3); short, smooth crops can be more decoupled (Ω ≈ 0.5–0.9)."
+  },
+  {
+    q:"Which EC-derived quantity is most directly used to estimate canopy conductance (g_c) for water vapour?",
+    opts:[
+      "The measured latent heat flux (λE) together with VPD and available energy",
+      "The sensible heat flux (H) divided by air temperature",
+      "The net radiation minus soil heat flux",
+      "The friction velocity u★ alone"
+    ],
+    explain:"Inverting the Penman–Monteith equation with measured λE, net radiation, air temperature, and VPD yields the bulk canopy conductance g_c (or surface conductance g_s). This is a key diagnostic of ecosystem water use regulation and stomatal response to drought."
+  },
+  {
+    q:"What does a high vapour pressure deficit (VPD) generally do to ecosystem ET measured by EC?",
+    opts:[
+      "Initially increases ET, but stomatal closure under high VPD can limit further increases",
+      "Always increases ET proportionally with no upper limit",
+      "Decreases ET immediately by reducing the evaporative gradient",
+      "Has no effect — ET is controlled only by available radiation"
+    ],
+    explain:"High VPD increases the evaporative demand, initially driving higher ET. However, plants respond by partially closing stomata to prevent excessive water loss, imposing a stomatal limit. The net effect depends on vegetation type, soil moisture status, and the magnitude of VPD."
+  },
+  {
+    q:"In EC terminology, 'u* filtering' is applied because:",
+    opts:[
+      "Below a u★ threshold (~0.1–0.2 m s⁻¹) turbulent mixing is insufficient to reliably capture scalar fluxes",
+      "High u★ values indicate instrument vibration that corrupts the signal",
+      "The footprint model is only valid for u★ > 1 m s⁻¹",
+      "u★ filtering removes rain events from the time series"
+    ],
+    explain:"Under low u★ (weak turbulence), scalar exchange is dominated by non-turbulent processes that EC cannot measure. Fluxes measured below a site-specific u★ threshold are discarded as unreliable. This threshold is typically 0.1–0.2 m s⁻¹ but must be determined from the data using change-point detection."
+  }
+];
+
+// Shuffle answer options once at page load; track correct answer index after shuffle
+function shuffleQuestion(raw){
+  const idxs=[0,1,2,3];
+  // Fisher-Yates
+  for(let i=idxs.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    const t=idxs[i];idxs[i]=idxs[j];idxs[j]=t;
+  }
+  const opts=idxs.map(function(i){return raw.opts[i];});
+  const ans=idxs.indexOf(0); // correct was always index 0 in raw
+  return{q:raw.q,opts:opts,ans:ans,explain:raw.explain};
+}
+const QUIZ_QUESTIONS=QUIZ_QUESTIONS_RAW.map(shuffleQuestion);
+
+let qIdx=0, qScore=0, qAnswered=false;
+
+function openQuiz(){
+  qIdx=0; qScore=0; qAnswered=false;
+  // Re-shuffle answers each time the quiz is opened
+  QUIZ_QUESTIONS_RAW.forEach(function(raw,i){
+    const s=shuffleQuestion(raw);
+    QUIZ_QUESTIONS[i]=s;
+  });
+  document.getElementById('quiz-results').style.display='none';
+  document.getElementById('quiz-modal').style.display='flex';
+  renderQuestion();
+}
+function closeQuiz(){
+  document.getElementById('quiz-modal').style.display='none';
+}
+function renderQuestion(){
+  qAnswered=false;
+  const q=QUIZ_QUESTIONS[qIdx];
+  const total=QUIZ_QUESTIONS.length;
+  const pct=Math.round((qIdx/total)*100);
+  document.getElementById('quiz-progress-fill').style.width=pct+'%';
+  document.getElementById('quiz-progress-label').textContent=(qIdx+1)+' / '+total;
+  document.getElementById('quiz-question').textContent=q.q;
+  const optBox=document.getElementById('quiz-options');
+  optBox.innerHTML='';
+  q.opts.forEach(function(txt,i){
+    const btn=document.createElement('button');
+    btn.className='quiz-opt';
+    btn.textContent=txt;
+    btn.onclick=function(){selectAnswer(i);};
+    optBox.appendChild(btn);
+  });
+  document.getElementById('quiz-feedback').style.display='none';
+  document.getElementById('quiz-explanation').style.display='none';
+  document.getElementById('quiz-score-val').textContent=qScore+' / '+total;
+  const nextBtn=document.getElementById('quiz-next-btn');
+  nextBtn.textContent=(qIdx===total-1)?'See Results →':'Next →';
+  nextBtn.style.display='none';
+}
+function selectAnswer(i){
+  if(qAnswered) return;
+  qAnswered=true;
+  const q=QUIZ_QUESTIONS[qIdx];
+  const btns=document.querySelectorAll('.quiz-opt');
+  btns.forEach(function(b){b.disabled=true;});
+  const correct=(i===q.ans);
+  if(correct) qScore++;
+  btns[i].classList.add(correct?'correct':'wrong');
+  btns[q.ans].classList.add('correct');
+  btns.forEach(function(b,j){if(j!==i&&j!==q.ans) b.classList.add('reveal');});
+  const fb=document.getElementById('quiz-feedback');
+  fb.className='';
+  fb.classList.add(correct?'ok':'bad');
+  fb.textContent=correct?'✓ Correct!':'✗ Not quite.';
+  fb.style.display='block';
+  const ex=document.getElementById('quiz-explanation');
+  ex.innerHTML='<b>Explanation:</b> '+q.explain;
+  ex.style.display='block';
+  document.getElementById('quiz-score-val').textContent=qScore+' / '+QUIZ_QUESTIONS.length;
+  document.getElementById('quiz-next-btn').style.display='inline-block';
+}
+function quizNext(){
+  qIdx++;
+  if(qIdx>=QUIZ_QUESTIONS.length){showResults();return;}
+  renderQuestion();
+}
+function showResults(){
+  const total=QUIZ_QUESTIONS.length;
+  const pct=Math.round((qScore/total)*100);
+  let icon,msg;
+  if(pct===100){icon='🏆';msg='Perfect score! You have mastered eddy covariance footprint theory.';}
+  else if(pct>=70){icon='🎉';msg='Great work! Review the explanations for any questions you missed.';}
+  else if(pct>=40){icon='📚';msg='Good start. Re-read the parameter descriptions and try again.';}
+  else{icon='🌱';msg='Keep exploring! Try adjusting the model parameters and re-reading the explanations.';}
+  document.getElementById('quiz-results-icon').textContent=icon;
+  document.getElementById('quiz-results-title').textContent='Quiz Complete';
+  document.getElementById('quiz-results-score').textContent=qScore+' / '+total+' ('+pct+'%)';
+  document.getElementById('quiz-results-msg').textContent=msg;
+  document.getElementById('quiz-results-breakdown').innerHTML=
+    '<span class="rb-chip rb-correct">✓ '+qScore+' correct</span>'+
+    '<span class="rb-chip rb-wrong">✗ '+(total-qScore)+' incorrect</span>';
+  document.getElementById('quiz-results').style.display='flex';
+}
+function quizRestart(){
+  document.getElementById('quiz-results').style.display='none';
+  qIdx=0; qScore=0; qAnswered=false;
+  QUIZ_QUESTIONS_RAW.forEach(function(raw,i){
+    QUIZ_QUESTIONS[i]=shuffleQuestion(raw);
+  });
+  renderQuestion();
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&document.getElementById('quiz-modal').style.display==='flex') closeQuiz();
 });
 
 // ═══════════════════════════════════════════════════════
